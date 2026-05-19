@@ -941,7 +941,7 @@ body {
 ═══════════════════════════════════════════════════════ */
 .toast {
   position: fixed;
-  bottom: 1.5rem;
+  top: 1.5rem;
   right: 1.5rem;
   z-index: 9999;
   display: flex;
@@ -963,9 +963,9 @@ body {
   color: var(--green-800, #166534);
 }
 .toast-error {
-  background: #fff;
-  border: 1px solid var(--red-200);
-  color: var(--red-700);
+  background: var(--red-600, #dc2626);
+  border: 1px solid var(--red-700, #b91c1c);
+  color: #fff;
 }
 .toast-icon {
   display: flex;
@@ -973,7 +973,7 @@ body {
   flex-shrink: 0;
 }
 .toast-success .toast-icon { color: var(--green-600, #16a34a); }
-.toast-error   .toast-icon { color: var(--red-500); }
+.toast-error   .toast-icon { color: #fff; }
 .toast-text { flex: 1; line-height: 1.45; }
 .toast-close {
   display: flex;
@@ -989,6 +989,8 @@ body {
   transition: color 120ms, background 120ms;
 }
 .toast-close:hover { color: var(--slate-700); background: var(--slate-100); }
+.toast-error .toast-close { color: rgba(255,255,255,0.84); }
+.toast-error .toast-close:hover { color: #fff; background: rgba(255,255,255,0.16); }
 .toast-bar {
   position: absolute;
   bottom: 0;
@@ -999,9 +1001,9 @@ body {
   animation: toast-bar 4s linear forwards;
 }
 .toast-success .toast-bar { background: var(--green-400, #4ade80); }
-.toast-error   .toast-bar { background: var(--red-400, #f87171); }
+.toast-error   .toast-bar { background: rgba(255,255,255,0.78); }
 @keyframes toast-in {
-  from { opacity: 0; transform: translateY(16px) scale(0.96); }
+  from { opacity: 0; transform: translate(18px, -10px) scale(0.96); }
   to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 @keyframes toast-bar {
@@ -1285,13 +1287,22 @@ label {
 }
 
 .label-text {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.2rem;
   font-size: var(--fs-sm);
   font-weight: 600;
   color: var(--slate-600);
   letter-spacing: 0.01em;
 }
 
-.label-required { color: var(--red-500); margin-left: 1px; }
+.label-required {
+  display: inline;
+  color: var(--red-500);
+  margin-left: 1px;
+  line-height: 1;
+  vertical-align: baseline;
+}
 
 input,
 select,
@@ -2124,6 +2135,12 @@ input[type="file"]::-webkit-file-upload-button:hover {
 }
 
 .create-label {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.2rem;
+  align-self: flex-start;
   font-size: var(--fs-xs);
   font-weight: 700;
   color: var(--slate-600);
@@ -2132,8 +2149,11 @@ input[type="file"]::-webkit-file-upload-button:hover {
 }
 
 .create-required {
+  display: inline;
   color: var(--red-500);
-  margin-left: 2px;
+  margin-left: 0;
+  line-height: 1;
+  vertical-align: baseline;
 }
 
 /* ── Input wrap ── */

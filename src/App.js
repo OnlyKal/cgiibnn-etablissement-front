@@ -170,7 +170,6 @@ function normalizeEtablissement(item) {
     accords_mobilite: Array.isArray(item.accords_mobilite)
       ? item.accords_mobilite.map((a) => ({ accord: a.accord || '' }))
       : [],
-    responsable: item.responsable || '',
     description: item.description || '',
   };
 }
@@ -258,7 +257,7 @@ function emptyCreateForm() {
     titre_propriete_propriete: null,
     nombre_residences_personnel: '',
     nombre_residences_estudiantines: '',
-    est_locataire: false,
+    est_locataire: null,
     biens_sans_titre_foncier: '',
     responsable_patrimoine_nom: '',
     responsable_patrimoine_telephone: '',
@@ -274,7 +273,6 @@ function emptyCreateForm() {
     cellule_marches_publics: false,
     marches_publics: [],
     accords_mobilite: [],
-    responsable: '',
     description: '',
     soumissionnaire_nom: '',
     soumissionnaire_email: '',
@@ -282,27 +280,315 @@ function emptyCreateForm() {
   };
 }
 
+const CREATE_FIELD_STEPS = {
+  nom_etablissement: 1,
+  sigle_etablissement: 1,
+  statut: 1,
+  acte_prise_en_charge: 1,
+  convention_etat_rdc: 1,
+  adresse: 2,
+  rue_avenue: 2,
+  commune: 2,
+  ville_localite: 2,
+  province: 2,
+  telephone: 2,
+  email: 2,
+  date_creation: 3,
+  acte_creation: 3,
+  acte_fonctionnement: 3,
+  acte_agrement: 3,
+  recteur_nom: 4,
+  recteur_sexe: 4,
+  recteur_grade: 4,
+  recteur_telephone: 4,
+  recteur_email: 4,
+  recteur_arrete: 4,
+  sga_nom: 4,
+  sga_sexe: 4,
+  sga_grade: 4,
+  sga_telephone: 4,
+  sga_email: 4,
+  sga_arrete: 4,
+  ab_nom: 4,
+  ab_sexe: 4,
+  ab_grade: 4,
+  ab_telephone: 4,
+  ab_email: 4,
+  ab_arrete: 4,
+  sgr_nom: 4,
+  sgr_sexe: 4,
+  sgr_grade: 4,
+  sgr_telephone: 4,
+  sgr_email: 4,
+  sgr_arrete: 4,
+  total_enseignants: 5,
+  pa: 5,
+  p: 5,
+  po: 5,
+  enseignants_femmes: 5,
+  chefs_travaux: 5,
+  assistants: 5,
+  charges_pratiques_professionnelles: 5,
+  personnel_scientifique_femmes: 5,
+  cadres_commandement: 5,
+  cadres_collaboration: 5,
+  agents_execution: 5,
+  filieres: 6,
+  accords_mobilite: 6,
+  niveaux_etudes: 6,
+  autres_niveaux: 6,
+  effectif_licence_total: 6,
+  effectif_master_total: 6,
+  effectif_doctorat_total: 6,
+  nombre_etudiants_lmd: 6,
+  titre_propriete_propriete: 7,
+  nombre_residences_personnel: 7,
+  nombre_residences_estudiantines: 7,
+  est_locataire: 7,
+  biens_sans_titre_foncier: 7,
+  responsable_patrimoine_nom: 7,
+  responsable_patrimoine_telephone: 7,
+  responsable_patrimoine_email: 7,
+  marches_publics: 11,
+  marche_nom: 11,
+  marche_telephone: 11,
+  marche_email: 11,
+  soumissionnaire_nom: 12,
+  soumissionnaire_email: 12,
+  soumissionnaire_telephone: 12,
+};
+
+const CREATE_FIELD_LABELS = {
+  nom_etablissement: 'Nom de l\'établissement',
+  sigle_etablissement: 'Sigle de l\'établissement',
+  statut: 'Statut',
+  acte_prise_en_charge: 'Acte de prise en charge',
+  convention_etat_rdc: 'Convention de l\'État',
+  adresse: 'Adresse',
+  rue_avenue: 'Rue / Avenue',
+  commune: 'Commune',
+  ville_localite: 'Ville / Localité',
+  province: 'Province',
+  telephone: 'Téléphone',
+  email: 'Email',
+  date_creation: 'Date de création',
+  acte_creation: 'Acte juridique de création',
+  acte_fonctionnement: 'Acte juridique d\'autorisation de fonctionnement',
+  acte_agrement: 'Acte juridique d\'agrément',
+  recteur_nom: 'Nom complet du Recteur / DG',
+  recteur_sexe: 'Sexe du Recteur / DG',
+  recteur_grade: 'Grade du Recteur / DG',
+  recteur_telephone: 'Téléphone du Recteur / DG',
+  recteur_email: 'E-mail du Recteur / DG',
+  recteur_arrete: 'Arrêté de nomination du Recteur / DG',
+  sga_nom: 'Nom complet du SGA',
+  sga_sexe: 'Sexe du SGA',
+  sga_grade: 'Grade du SGA',
+  sga_telephone: 'Téléphone du SGA',
+  sga_email: 'Email du SGA',
+  sga_arrete: 'Arrêté de nomination du SGA',
+  ab_nom: 'Nom complet de l\'AB',
+  ab_sexe: 'Sexe de l\'AB',
+  ab_grade: 'Grade de l\'AB',
+  ab_telephone: 'Téléphone de l\'AB',
+  ab_email: 'Email de l\'AB',
+  ab_arrete: 'Arrêté de nomination de l\'AB',
+  sgr_nom: 'Nom complet du SGR',
+  sgr_sexe: 'Sexe du SGR',
+  sgr_grade: 'Grade du SGR',
+  sgr_telephone: 'Téléphone du SGR',
+  sgr_email: 'Email du SGR',
+  sgr_arrete: 'Arrêté de nomination du SGR',
+  total_enseignants: 'Nombre total d\'enseignants',
+  pa: 'Professeurs Associés (PA)',
+  p: 'Professeurs (P)',
+  po: 'Professeurs Ordinaires (PO)',
+  enseignants_femmes: 'Effectif d\'enseignants de sexe féminin',
+  chefs_travaux: 'Chefs des travaux',
+  assistants: 'Assistants',
+  charges_pratiques_professionnelles: 'Chargés de pratiques professionnelles',
+  personnel_scientifique_femmes: 'Effectif du personnel scientifique de sexe féminin',
+  cadres_commandement: 'Cadres de commandement',
+  cadres_collaboration: 'Cadres de collaboration',
+  agents_execution: 'Agents d\'exécution',
+  filieres: 'Filière organisée',
+  accords_mobilite: 'Accords de mobilité internationale des étudiants',
+  niveaux_etudes: 'Niveaux d\'études',
+  autres_niveaux: 'Autres niveaux',
+  effectif_licence_total: 'Effectif Licence (total)',
+  effectif_master_total: 'Effectif Master (total)',
+  effectif_doctorat_total: 'Effectif Doctorat (total)',
+  nombre_etudiants_lmd: 'Étudiants LMD (total)',
+  titre_propriete_propriete: 'Titre de propriété immobilière',
+  nombre_residences_personnel: 'Nombre des résidences pour le personnel',
+  nombre_residences_estudiantines: 'Nombre des résidences estudiantines',
+  est_locataire: 'L\'établissement est locataire',
+  biens_sans_titre_foncier: 'Propriétés sans titre foncier',
+  responsable_patrimoine_nom: 'Responsable patrimoine — Nom',
+  responsable_patrimoine_telephone: 'Téléphone du responsable patrimoine',
+  responsable_patrimoine_email: 'Email du responsable patrimoine',
+  marches_publics: 'Membre de la cellule marchés publics',
+  marche_nom: 'Nom du membre',
+  marche_telephone: 'Téléphone du membre',
+  marche_email: 'Email du membre',
+  soumissionnaire_nom: 'Nom complet',
+  soumissionnaire_email: 'Adresse e-mail',
+  soumissionnaire_telephone: 'Téléphone',
+};
+
+const COMITE_REQUIRED_FIELDS = [
+  'recteur_nom', 'recteur_sexe', 'recteur_grade', 'recteur_telephone', 'recteur_email', 'recteur_arrete',
+  'sga_nom', 'sga_sexe', 'sga_grade', 'sga_telephone', 'sga_email', 'sga_arrete',
+  'ab_nom', 'ab_sexe', 'ab_grade', 'ab_telephone', 'ab_email', 'ab_arrete',
+  'sgr_nom', 'sgr_sexe', 'sgr_grade', 'sgr_telephone', 'sgr_email', 'sgr_arrete',
+];
+
+const RESSOURCES_HUMAINES_REQUIRED_FIELDS = [
+  'total_enseignants', 'pa', 'p', 'po', 'enseignants_femmes',
+  'chefs_travaux', 'assistants', 'charges_pratiques_professionnelles', 'personnel_scientifique_femmes',
+  'cadres_commandement', 'cadres_collaboration', 'agents_execution',
+];
+
+function requiredFieldMessage(field) {
+  return `Le champ ${CREATE_FIELD_LABELS[field] || field} est obligatoire.`;
+}
+
+function invalidEmailMessage(field) {
+  return `Le champ ${CREATE_FIELD_LABELS[field] || field} doit contenir une adresse e-mail valide.`;
+}
+
 function validateCreateForm(form) {
   const errors = {};
   const isPrivate = form.statut === 'prive';
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
   if (!form.nom_etablissement.trim()) {
-    errors.nom_etablissement = 'Le nom de l\'établissement est obligatoire.';
+    errors.nom_etablissement = requiredFieldMessage('nom_etablissement');
   }
   if (!form.sigle_etablissement.trim()) {
-    errors.sigle_etablissement = 'Le sigle est obligatoire.';
+    errors.sigle_etablissement = requiredFieldMessage('sigle_etablissement');
   }
   if (!form.statut.trim()) {
-    errors.statut = 'Le statut est obligatoire.';
+    errors.statut = requiredFieldMessage('statut');
   }
-  if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
-    errors.email = 'Format email invalide.';
+  if (!form.adresse.trim()) {
+    errors.adresse = requiredFieldMessage('adresse');
+  }
+  if (!form.rue_avenue.trim()) {
+    errors.rue_avenue = requiredFieldMessage('rue_avenue');
+  }
+  if (!form.commune.trim()) {
+    errors.commune = requiredFieldMessage('commune');
+  }
+  if (!form.ville_localite.trim()) {
+    errors.ville_localite = requiredFieldMessage('ville_localite');
+  }
+  if (!form.province.trim()) {
+    errors.province = requiredFieldMessage('province');
+  }
+  if (!form.telephone.trim()) {
+    errors.telephone = requiredFieldMessage('telephone');
+  }
+  if (!form.email.trim()) {
+    errors.email = requiredFieldMessage('email');
+  } else if (!emailRegex.test(form.email)) {
+    errors.email = invalidEmailMessage('email');
+  }
+  if (!form.date_creation) {
+    errors.date_creation = requiredFieldMessage('date_creation');
+  }
+  if (!form.acte_creation) {
+    errors.acte_creation = requiredFieldMessage('acte_creation');
+  }
+  if (isPrivate && !form.acte_fonctionnement) {
+    errors.acte_fonctionnement = requiredFieldMessage('acte_fonctionnement');
+  }
+  if (isPrivate && !form.acte_agrement) {
+    errors.acte_agrement = requiredFieldMessage('acte_agrement');
   }
   if (isPrivate && !form.acte_prise_en_charge) {
-    errors.acte_prise_en_charge = 'L\'acte de prise en charge est obligatoire pour un établissement privé.';
+    errors.acte_prise_en_charge = requiredFieldMessage('acte_prise_en_charge');
   }
-  if (isPrivate && !form.convention_etat_rdc) {
-    errors.convention_etat_rdc = 'La convention de l\'État est obligatoire pour un établissement privé.';
+  if (isPrivate && form.pris_en_charge_par_etat && !form.convention_etat_rdc) {
+    errors.convention_etat_rdc = requiredFieldMessage('convention_etat_rdc');
+  }
+
+  COMITE_REQUIRED_FIELDS.forEach((field) => {
+    const value = form[field];
+    if (typeof File !== 'undefined' && value instanceof File) return;
+    if (value == null || !String(value).trim()) errors[field] = requiredFieldMessage(field);
+  });
+  ['recteur_email', 'sga_email', 'ab_email', 'sgr_email'].forEach((field) => {
+    if (form[field] && !emailRegex.test(form[field])) {
+      errors[field] = invalidEmailMessage(field);
+    }
+  });
+  RESSOURCES_HUMAINES_REQUIRED_FIELDS.forEach((field) => {
+    if (form[field] === '' || form[field] == null) {
+      errors[field] = requiredFieldMessage(field);
+    }
+  });
+  if (!form.filieres.length) {
+    errors.filieres = requiredFieldMessage('filieres');
+  }
+  if (!form.accords_mobilite.length) {
+    errors.accords_mobilite = requiredFieldMessage('accords_mobilite');
+  }
+  if (!form.licence && !form.master && !form.doctorat) {
+    errors.niveaux_etudes = requiredFieldMessage('niveaux_etudes');
+  }
+  ['autres_niveaux', 'effectif_licence_total', 'effectif_master_total', 'effectif_doctorat_total', 'nombre_etudiants_lmd'].forEach((field) => {
+    if (form[field] === '' || form[field] == null) {
+      errors[field] = requiredFieldMessage(field);
+    }
+  });
+  if (!form.titre_propriete_propriete) {
+    errors.titre_propriete_propriete = requiredFieldMessage('titre_propriete_propriete');
+  }
+  ['nombre_residences_personnel', 'nombre_residences_estudiantines'].forEach((field) => {
+    if (form[field] === '' || form[field] == null) {
+      errors[field] = requiredFieldMessage(field);
+    }
+  });
+  if (form.est_locataire !== true && form.est_locataire !== false) {
+    errors.est_locataire = requiredFieldMessage('est_locataire');
+  }
+  ['biens_sans_titre_foncier', 'responsable_patrimoine_nom', 'responsable_patrimoine_telephone', 'responsable_patrimoine_email'].forEach((field) => {
+    if (!form[field].trim()) {
+      errors[field] = requiredFieldMessage(field);
+    }
+  });
+  if (form.responsable_patrimoine_email && !emailRegex.test(form.responsable_patrimoine_email)) {
+    errors.responsable_patrimoine_email = invalidEmailMessage('responsable_patrimoine_email');
+  }
+  if (form.cellule_marches_publics) {
+    if (!form.marches_publics.length) {
+      errors.marches_publics = requiredFieldMessage('marches_publics');
+    } else {
+      const hasIncompleteMember = form.marches_publics.some((member) =>
+        !member.nom?.trim() || !member.telephone?.trim() || !member.email?.trim()
+      );
+      const hasInvalidMemberEmail = form.marches_publics.some((member) =>
+        member.email?.trim() && !emailRegex.test(member.email)
+      );
+      if (hasIncompleteMember) {
+        errors.marches_publics = 'Tous les champs du membre de la cellule marchés publics sont obligatoires.';
+      } else if (hasInvalidMemberEmail) {
+        errors.marches_publics = 'Le champ Email du membre doit contenir une adresse e-mail valide.';
+      }
+    }
+  }
+
+  if (!form.soumissionnaire_nom.trim()) {
+    errors.soumissionnaire_nom = requiredFieldMessage('soumissionnaire_nom');
+  }
+  if (!form.soumissionnaire_email.trim()) {
+    errors.soumissionnaire_email = requiredFieldMessage('soumissionnaire_email');
+  } else if (!emailRegex.test(form.soumissionnaire_email)) {
+    errors.soumissionnaire_email = invalidEmailMessage('soumissionnaire_email');
+  }
+  if (!form.soumissionnaire_telephone.trim()) {
+    errors.soumissionnaire_telephone = requiredFieldMessage('soumissionnaire_telephone');
   }
 
   return errors;
@@ -441,7 +727,6 @@ function buildCreateJsonPayload(form) {
     ecole_doctorale: form.ecole_doctorale,
     cellule_marches_publics: form.cellule_marches_publics,
     marches_publics: form.marches_publics,
-    responsable: form.responsable,
     description: form.description,
     soumissionnaire_nom: form.soumissionnaire_nom,
     soumissionnaire_email: form.soumissionnaire_email,
@@ -548,7 +833,6 @@ function buildCreateMultipartPayload(form) {
   if (form.acte_ecole_doctorale) formData.append('acte_ecole_doctorale', form.acte_ecole_doctorale, form.acte_ecole_doctorale.name);
   formData.append('cellule_marches_publics', String(form.cellule_marches_publics));
   if (form.marches_publics.length) formData.append('marches_publics', JSON.stringify(form.marches_publics));
-  formData.append('responsable', form.responsable);
   formData.append('description', form.description);
   formData.append('soumissionnaire_nom', form.soumissionnaire_nom);
   formData.append('soumissionnaire_email', form.soumissionnaire_email);
@@ -659,7 +943,6 @@ function mapToUpdateForm(item) {
     accords_mobilite: Array.isArray(item.accords_mobilite)
       ? item.accords_mobilite.map((a) => ({ accord: a.accord || '' }))
       : [],
-    responsable: item.responsable || '',
     description: item.description || '',
     soumissionnaire_nom: item.soumissionnaire_nom || '',
     soumissionnaire_email: item.soumissionnaire_email || '',
@@ -706,7 +989,6 @@ function buildPatchJsonPayload(current, original) {
     'organigramme_existe', 'audit_interne',
     'date_dernier_controle_viabilite', 'date_dernier_controle_gestion', 'date_dernier_controle_scolarite',
     'ecole_doctorale', 'cellule_marches_publics',
-    'responsable',
     'description',
     'soumissionnaire_nom',
     'soumissionnaire_email',
@@ -1199,7 +1481,12 @@ function App() {
           pris_en_charge_par_etat: false,
           acte_prise_en_charge: null,
           convention_etat_rdc: null,
+          acte_fonctionnement: null,
+          acte_agrement: null,
         };
+      }
+      if (field === 'cellule_marches_publics' && value === false) {
+        return { ...prev, cellule_marches_publics: false, marches_publics: [] };
       }
 
       return { ...prev, [field]: value };
@@ -1212,6 +1499,37 @@ function App() {
           pris_en_charge_par_etat: '',
           acte_prise_en_charge: '',
           convention_etat_rdc: '',
+          acte_fonctionnement: '',
+          acte_agrement: '',
+        };
+      }
+      if (field === 'pris_en_charge_par_etat' && value === false) {
+        return {
+          ...prev,
+          pris_en_charge_par_etat: '',
+          convention_etat_rdc: '',
+        };
+      }
+      if (field.endsWith('_en_fonction') && value === true) {
+        const prefix = field.replace('_en_fonction', '');
+        return {
+          ...prev,
+          [field]: '',
+          [`${prefix}_hors_fonction_depuis`]: '',
+          [`${prefix}_hors_fonction_motif`]: '',
+        };
+      }
+      if (['licence', 'master', 'doctorat'].includes(field)) {
+        return { ...prev, [field]: '', niveaux_etudes: '' };
+      }
+      if (field === 'cellule_marches_publics') {
+        return {
+          ...prev,
+          cellule_marches_publics: '',
+          marches_publics: '',
+          marche_nom: '',
+          marche_telephone: '',
+          marche_email: '',
         };
       }
 
@@ -1219,11 +1537,71 @@ function App() {
     });
   }
 
+  function handleMarcheFormChange(field, value) {
+    const errorField = `marche_${field}`;
+    setMarcheForm((prev) => ({ ...prev, [field]: value }));
+    setFormErrors((prev) => ({ ...prev, [errorField]: '', marches_publics: '' }));
+  }
+
+  function validateCreateProgress(targetStep) {
+    const allErrors = validateCreateForm(createForm);
+    const blockingErrors = Object.entries(allErrors).filter(
+      ([field]) => (CREATE_FIELD_STEPS[field] || 1) < targetStep
+    );
+    const progressErrors = Object.fromEntries(blockingErrors);
+    setFormErrors((prev) => ({ ...prev, ...progressErrors }));
+
+    if (blockingErrors.length > 0) {
+      const [firstInvalidField, firstError] = blockingErrors[0];
+      const firstInvalidStep = CREATE_FIELD_STEPS[firstInvalidField] || 1;
+      setCreateStep(firstInvalidStep);
+      showMessage('error', firstError);
+      return false;
+    }
+
+    return true;
+  }
+
+  function goToCreateStep(targetStep) {
+    if (targetStep > createStep && !validateCreateProgress(targetStep)) return;
+    setCreateStep(targetStep);
+  }
+
+  function goToNextCreateStep() {
+    const nextStep = Math.min(createStep + 1, CREATE_STEPS[CREATE_STEPS.length - 1].num);
+    if (!validateCreateProgress(nextStep)) return;
+    setCreateStep(nextStep);
+  }
+
   function addMembreMarche() {
-    if (!marcheForm.nom.trim()) return;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const errors = {};
+    if (!marcheForm.nom.trim()) errors.marche_nom = requiredFieldMessage('marche_nom');
+    if (!marcheForm.telephone.trim()) errors.marche_telephone = requiredFieldMessage('marche_telephone');
+    if (!marcheForm.email.trim()) {
+      errors.marche_email = requiredFieldMessage('marche_email');
+    } else if (!emailRegex.test(marcheForm.email)) {
+      errors.marche_email = invalidEmailMessage('marche_email');
+    }
+    if (Object.keys(errors).length) {
+      setFormErrors((prev) => ({ ...prev, ...errors }));
+      showMessage('error', Object.values(errors)[0]);
+      return;
+    }
     setCreateForm((prev) => ({
       ...prev,
-      marches_publics: [...prev.marches_publics, { ...marcheForm }],
+      marches_publics: [...prev.marches_publics, {
+        nom: marcheForm.nom.trim(),
+        telephone: marcheForm.telephone.trim(),
+        email: marcheForm.email.trim(),
+      }],
+    }));
+    setFormErrors((prev) => ({
+      ...prev,
+      marches_publics: '',
+      marche_nom: '',
+      marche_telephone: '',
+      marche_email: '',
     }));
     setMarcheForm({ nom: '', telephone: '', email: '' });
   }
@@ -1259,6 +1637,7 @@ function App() {
       ...prev,
       filieres: [...prev.filieres, { nom, effectifs: filiereForm.effectifs }],
     }));
+    setFormErrors((prev) => ({ ...prev, filieres: '' }));
     setFiliereForm({ nom: '', effectifs: [] });
     setEffectifDraftForm({ annee: '', total: '', masculin: '', feminin: '' });
   }
@@ -1277,6 +1656,7 @@ function App() {
       ...prev,
       accords_mobilite: [...prev.accords_mobilite, { accord: val }],
     }));
+    setFormErrors((prev) => ({ ...prev, accords_mobilite: '' }));
     setAccordDraft('');
   }
 
@@ -1531,28 +1911,12 @@ function App() {
     setFormErrors(errors);
 
     if (Object.keys(errors).length > 0) {
-      // Mapping champ → étape
-      const fieldStep = {
-        nom_etablissement: 1, sigle_etablissement: 1, statut: 1, email: 1,
-        acte_prise_en_charge: 1, convention_etat_rdc: 1,
-      };
       // Aller à la première étape contenant une erreur
-      const stepsWithErrors = [...new Set(Object.keys(errors).map((f) => fieldStep[f] || 1))];
+      const stepsWithErrors = [...new Set(Object.keys(errors).map((f) => CREATE_FIELD_STEPS[f] || 1))];
       const firstStep = Math.min(...stepsWithErrors);
       setCreateStep(firstStep);
 
-      const labels = {
-        nom_etablissement: 'Nom de l\'établissement',
-        sigle_etablissement: 'Sigle',
-        statut: 'Statut',
-        email: 'Email',
-        acte_prise_en_charge: 'Acte de prise en charge',
-        convention_etat_rdc: 'Convention de l\'État',
-      };
-      const details = Object.keys(errors)
-        .map((f) => `• ${labels[f] || f} (étape ${fieldStep[f] || 1})`)
-        .join('\n');
-      showMessage('error', `Champs invalides :\n${details}`);
+      showMessage('error', Object.values(errors)[0]);
       return;
     }
 
@@ -1748,7 +2112,7 @@ function App() {
 
       {/* ── Toast popup ───────────────────────────────── */}
       {message.text && (
-        <div className={`toast toast-${message.type === 'error' ? 'error' : 'success'}`}>
+        <div key={`${message.type}-${message.text}`} className={`toast toast-${message.type === 'error' ? 'error' : 'success'}`}>
           <div className="toast-icon">
             {message.type === 'error'
               ? <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
@@ -1898,7 +2262,7 @@ function App() {
                   key={s.num}
                   type="button"
                   className={`step-item${createStep === s.num ? ' step-active' : ''}${createStep > s.num ? ' step-done' : ''}`}
-                  onClick={() => setCreateStep(s.num)}
+                  onClick={() => goToCreateStep(s.num)}
                 >
                   <span className="step-circle">
                     {createStep > s.num
@@ -2006,18 +2370,19 @@ function App() {
                         {formErrors.acte_prise_en_charge && <span className="create-error">{formErrors.acte_prise_en_charge}</span>}
                       </div>
 
-                      {/* Convention État RDC */}
-                      <div className="create-field col-full">
-                        <label className="create-label">Convention de l'État <span className="create-required">*</span></label>
-                        <input
-                          type="file"
-                          className={`create-file-input${formErrors.convention_etat_rdc ? ' create-input-error' : ''}`}
-                          required
-                          onChange={(e) => handleCreateChange('convention_etat_rdc', e.target.files?.[0] || null)}
-                        />
-                        {createForm.convention_etat_rdc && <span className="create-doc-file">· {createForm.convention_etat_rdc.name}</span>}
-                        {formErrors.convention_etat_rdc && <span className="create-error">{formErrors.convention_etat_rdc}</span>}
-                      </div>
+                      {createForm.pris_en_charge_par_etat && (
+                        <div className="create-field col-full">
+                          <label className="create-label">Convention de l'État <span className="create-required">*</span></label>
+                          <input
+                            type="file"
+                            className={`create-file-input${formErrors.convention_etat_rdc ? ' create-input-error' : ''}`}
+                            required
+                            onChange={(e) => handleCreateChange('convention_etat_rdc', e.target.files?.[0] || null)}
+                          />
+                          {createForm.convention_etat_rdc && <span className="create-doc-file">· {createForm.convention_etat_rdc.name}</span>}
+                          {formErrors.convention_etat_rdc && <span className="create-error">{formErrors.convention_etat_rdc}</span>}
+                        </div>
+                      )}
                     </>
                   )}
 
@@ -2038,88 +2403,94 @@ function App() {
 
                   {/* Adresse — full width */}
                   <div className="create-field col-full">
-                    <label className="create-label">Adresse</label>
+                    <label className="create-label">Adresse <span className="create-required">*</span></label>
                     <div className="create-input-wrap">
                       <svg className="create-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="14" height="14"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
                       <input
-                        className="create-input"
+                        className={`create-input${formErrors.adresse ? ' create-input-error' : ''}`}
                         value={createForm.adresse}
                         onChange={(e) => handleCreateChange('adresse', e.target.value)}
                         placeholder="ex : Avenue de l'Université, Kinshasa"
                       />
                     </div>
+                    {formErrors.adresse && <span className="create-error">{formErrors.adresse}</span>}
                   </div>
 
                   {/* Rue / Avenue */}
                   <div className="create-field">
-                    <label className="create-label">Rue / Avenue</label>
+                    <label className="create-label">Rue / Avenue <span className="create-required">*</span></label>
                     <div className="create-input-wrap">
                       <svg className="create-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="14" height="14"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
                       <input
-                        className="create-input"
+                        className={`create-input${formErrors.rue_avenue ? ' create-input-error' : ''}`}
                         value={createForm.rue_avenue}
                         onChange={(e) => handleCreateChange('rue_avenue', e.target.value)}
                         placeholder="ex : Avenue Université"
                       />
                     </div>
+                    {formErrors.rue_avenue && <span className="create-error">{formErrors.rue_avenue}</span>}
                   </div>
 
                   {/* Commune */}
                   <div className="create-field">
-                    <label className="create-label">Commune</label>
+                    <label className="create-label">Commune <span className="create-required">*</span></label>
                     <div className="create-input-wrap">
                       <svg className="create-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="14" height="14"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/></svg>
                       <input
-                        className="create-input"
+                        className={`create-input${formErrors.commune ? ' create-input-error' : ''}`}
                         value={createForm.commune}
                         onChange={(e) => handleCreateChange('commune', e.target.value)}
                         placeholder="ex : Lingwala"
                       />
                     </div>
+                    {formErrors.commune && <span className="create-error">{formErrors.commune}</span>}
                   </div>
 
                   {/* Ville / Localité */}
                   <div className="create-field">
-                    <label className="create-label">Ville / Localité</label>
+                    <label className="create-label">Ville / Localité <span className="create-required">*</span></label>
                     <div className="create-input-wrap">
                       <svg className="create-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="14" height="14"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
                       <input
-                        className="create-input"
+                        className={`create-input${formErrors.ville_localite ? ' create-input-error' : ''}`}
                         value={createForm.ville_localite}
                         onChange={(e) => handleCreateChange('ville_localite', e.target.value)}
                         placeholder="ex : Kinshasa"
                       />
                     </div>
+                    {formErrors.ville_localite && <span className="create-error">{formErrors.ville_localite}</span>}
                   </div>
 
                   {/* Province */}
                   <div className="create-field">
-                    <label className="create-label">Province</label>
+                    <label className="create-label">Province <span className="create-required">*</span></label>
                     <ProvinceDropdown
                       required
                       placeholder="Sélectionner une province"
                       value={createForm.province}
                       onChange={(v) => handleCreateChange('province', v)}
                     />
+                    {formErrors.province && <span className="create-error">{formErrors.province}</span>}
                   </div>
 
                   {/* Téléphone */}
                   <div className="create-field">
-                    <label className="create-label">Téléphone</label>
+                    <label className="create-label">Téléphone <span className="create-required">*</span></label>
                     <div className="create-input-wrap">
                       <svg className="create-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="14" height="14"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.73 9.7 19.79 19.79 0 01.67 1.1 2 2 0 012.65 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 7.64a16 16 0 006.29 6.29l.95-.95a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
                       <input
-                        className="create-input"
+                        className={`create-input${formErrors.telephone ? ' create-input-error' : ''}`}
                         value={createForm.telephone}
                         onChange={(e) => handleCreateChange('telephone', e.target.value)}
                         placeholder="+243 …"
                       />
                     </div>
+                    {formErrors.telephone && <span className="create-error">{formErrors.telephone}</span>}
                   </div>
 
                   {/* Email */}
                   <div className="create-field">
-                    <label className="create-label">Email</label>
+                    <label className="create-label">Email <span className="create-required">*</span></label>
                     <div className="create-input-wrap">
                       <svg className="create-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="14" height="14"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
                       <input
@@ -2243,20 +2614,6 @@ function App() {
                     </div>
                   )}
 
-                  {/* Responsable */}
-                  <div className="create-field col-full">
-                    <label className="create-label">Responsable</label>
-                    <div className="create-input-wrap">
-                      <svg className="create-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="14" height="14"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                      <input
-                        className="create-input"
-                        value={createForm.responsable}
-                        onChange={(e) => handleCreateChange('responsable', e.target.value)}
-                        placeholder="Nom du responsable"
-                      />
-                    </div>
-                  </div>
-
                   {/* Description — full width, textarea */}
                   <div className="create-field col-full">
                     <label className="create-label">Description</label>
@@ -2289,50 +2646,61 @@ function App() {
 
                   {/* Date de création — full width */}
                   <div className="create-field col-full">
-                    <label className="create-label">Date de création</label>
+                    <label className="create-label">Date de création <span className="create-required">*</span></label>
                     <div className="create-input-wrap">
                       <svg className="create-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="14" height="14"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
                       <input
                         type="date"
-                        className="create-input"
+                        className={`create-input${formErrors.date_creation ? ' create-input-error' : ''}`}
                         value={createForm.date_creation}
                         onChange={(e) => handleCreateChange('date_creation', e.target.value)}
                       />
                     </div>
+                    {formErrors.date_creation && <span className="create-error">{formErrors.date_creation}</span>}
                   </div>
 
                   {/* Acte de création */}
                   <div className="create-field">
-                    <label className="create-label">Acte juridique de création</label>
+                    <label className="create-label">Acte juridique de création <span className="create-required">*</span></label>
                     <input
                       type="file"
-                      className="create-file-input"
+                      className={`create-file-input${formErrors.acte_creation ? ' create-input-error' : ''}`}
+                      required
                       onChange={(e) => handleCreateChange('acte_creation', e.target.files?.[0] || null)}
                     />
                     {createForm.acte_creation && <span className="create-doc-file">· {createForm.acte_creation.name}</span>}
+                    {formErrors.acte_creation && <span className="create-error">{formErrors.acte_creation}</span>}
                   </div>
 
-                  {/* Acte de fonctionnement */}
-                  <div className="create-field">
-                    <label className="create-label">Acte juridique d'autorisation de fonctionnement</label>
-                    <input
-                      type="file"
-                      className="create-file-input"
-                      onChange={(e) => handleCreateChange('acte_fonctionnement', e.target.files?.[0] || null)}
-                    />
-                    {createForm.acte_fonctionnement && <span className="create-doc-file">· {createForm.acte_fonctionnement.name}</span>}
-                  </div>
+                  {isPrivateCreate && (
+                    <>
+                      {/* Acte de fonctionnement */}
+                      <div className="create-field">
+                        <label className="create-label">Acte juridique d'autorisation de fonctionnement <span className="create-required">*</span></label>
+                        <input
+                          type="file"
+                          className={`create-file-input${formErrors.acte_fonctionnement ? ' create-input-error' : ''}`}
+                          required
+                          onChange={(e) => handleCreateChange('acte_fonctionnement', e.target.files?.[0] || null)}
+                        />
+                        {createForm.acte_fonctionnement && <span className="create-doc-file">· {createForm.acte_fonctionnement.name}</span>}
+                        {formErrors.acte_fonctionnement && <span className="create-error">{formErrors.acte_fonctionnement}</span>}
+                      </div>
 
-                  {/* Acte d'agrément */}
-                  <div className="create-field">
-                    <label className="create-label">Acte juridique d'agrément</label>
-                    <input
-                      type="file"
-                      className="create-file-input"
-                      onChange={(e) => handleCreateChange('acte_agrement', e.target.files?.[0] || null)}
-                    />
-                    {createForm.acte_agrement && <span className="create-doc-file">· {createForm.acte_agrement.name}</span>}
-                  </div>
+                      {/* Acte d'agrément */}
+                      <div className="create-field">
+                        <label className="create-label">Acte juridique d'agrément <span className="create-required">*</span></label>
+                        <input
+                          type="file"
+                          className={`create-file-input${formErrors.acte_agrement ? ' create-input-error' : ''}`}
+                          required
+                          onChange={(e) => handleCreateChange('acte_agrement', e.target.files?.[0] || null)}
+                        />
+                        {createForm.acte_agrement && <span className="create-doc-file">· {createForm.acte_agrement.name}</span>}
+                        {formErrors.acte_agrement && <span className="create-error">{formErrors.acte_agrement}</span>}
+                      </div>
+                    </>
+                  )}
 
                 </div>
               </div>)}
@@ -2352,50 +2720,56 @@ function App() {
                   <div className="create-comite-label">Recteur / DG </div>
                   <div className="create-grid">
                     <div className="create-field">
-                      <label className="create-label">Nom complet</label>
+                      <label className="create-label">Nom complet <span className="create-required">*</span></label>
                       <div className="create-input-wrap">
                         <svg className="create-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="14" height="14"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                        <input className="create-input" value={createForm.recteur_nom} onChange={(e) => handleCreateChange('recteur_nom', e.target.value)} placeholder="Nom du recteur" />
+                        <input className={`create-input${formErrors.recteur_nom ? ' create-input-error' : ''}`} value={createForm.recteur_nom} onChange={(e) => handleCreateChange('recteur_nom', e.target.value)} placeholder="Nom du recteur" />
                       </div>
+                      {formErrors.recteur_nom && <span className="create-error">{formErrors.recteur_nom}</span>}
                     </div>
                     <div className="create-field">
-                      <label className="create-label">Sexe</label>
+                      <label className="create-label">Sexe <span className="create-required">*</span></label>
                       <div className="create-input-wrap">
-                        <select className="create-input create-select create-select-no-icon" value={createForm.recteur_sexe} onChange={(e) => handleCreateChange('recteur_sexe', e.target.value)}>
+                        <select className={`create-input create-select create-select-no-icon${formErrors.recteur_sexe ? ' create-input-error' : ''}`} value={createForm.recteur_sexe} onChange={(e) => handleCreateChange('recteur_sexe', e.target.value)}>
                           <option value="">—</option>
                           <option value="M">Masculin</option>
                           <option value="F">Féminin</option>
                         </select>
                       </div>
+                      {formErrors.recteur_sexe && <span className="create-error">{formErrors.recteur_sexe}</span>}
                     </div>
                     <div className="create-field">
-                      <label className="create-label">Grade</label>
+                      <label className="create-label">Grade <span className="create-required">*</span></label>
                       <div className="create-input-wrap">
-                        <input className="create-input" value={createForm.recteur_grade} onChange={(e) => handleCreateChange('recteur_grade', e.target.value)} placeholder="ex : Professeur Ordinaire" />
+                        <input className={`create-input${formErrors.recteur_grade ? ' create-input-error' : ''}`} value={createForm.recteur_grade} onChange={(e) => handleCreateChange('recteur_grade', e.target.value)} placeholder="ex : Professeur Ordinaire" />
                       </div>
+                      {formErrors.recteur_grade && <span className="create-error">{formErrors.recteur_grade}</span>}
                     </div>
                     <div className="create-field">
-                      <label className="create-label">Téléphone</label>
+                      <label className="create-label">Téléphone <span className="create-required">*</span></label>
                       <div className="create-input-wrap">
                         <svg className="create-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="14" height="14"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.73 9.7 19.79 19.79 0 01.67 1.1 2 2 0 012.65 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 7.64a16 16 0 006.29 6.29l.95-.95a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
-                        <input className="create-input" value={createForm.recteur_telephone} onChange={(e) => handleCreateChange('recteur_telephone', e.target.value)} placeholder="+243 …" />
+                        <input className={`create-input${formErrors.recteur_telephone ? ' create-input-error' : ''}`} value={createForm.recteur_telephone} onChange={(e) => handleCreateChange('recteur_telephone', e.target.value)} placeholder="+243 …" />
                       </div>
+                      {formErrors.recteur_telephone && <span className="create-error">{formErrors.recteur_telephone}</span>}
                     </div>
                     <div className="create-field">
-                      <label className="create-label">E-mail</label>
+                      <label className="create-label">E-mail <span className="create-required">*</span></label>
                       <div className="create-input-wrap">
                         <svg className="create-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="14" height="14"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-                        <input type="email" className="create-input" value={createForm.recteur_email} onChange={(e) => handleCreateChange('recteur_email', e.target.value)} placeholder="recteur@etab.cd" />
+                        <input type="email" className={`create-input${formErrors.recteur_email ? ' create-input-error' : ''}`} value={createForm.recteur_email} onChange={(e) => handleCreateChange('recteur_email', e.target.value)} placeholder="recteur@etab.cd" />
                       </div>
+                      {formErrors.recteur_email && <span className="create-error">{formErrors.recteur_email}</span>}
                     </div>
                     <div className="create-field">
-                      <label className="create-label">Arrêté de nomination</label>
-                      <input type="file" className="create-file-input" onChange={(e) => handleCreateChange('recteur_arrete', e.target.files?.[0] || null)} />
+                      <label className="create-label">Arrêté de nomination <span className="create-required">*</span></label>
+                      <input type="file" className={`create-file-input${formErrors.recteur_arrete ? ' create-input-error' : ''}`} required onChange={(e) => handleCreateChange('recteur_arrete', e.target.files?.[0] || null)} />
                       {createForm.recteur_arrete && <span className="create-doc-file">· {createForm.recteur_arrete.name}</span>}
+                      {formErrors.recteur_arrete && <span className="create-error">{formErrors.recteur_arrete}</span>}
                     </div>
                     {/* Recteur — En fonction */}
                     <div className="create-field col-full">
-                      <label className="create-label">En fonction ?</label>
+                      <label className="create-label">En fonction ? <span className="create-required">*</span></label>
                       <div style={{display:'flex',gap:'1.5rem'}}>
                         <label className="create-label-checkbox"><input type="radio" name="recteur_en_fonction" checked={createForm.recteur_en_fonction === true} onChange={() => handleCreateChange('recteur_en_fonction', true)} /> Oui</label>
                         <label className="create-label-checkbox"><input type="radio" name="recteur_en_fonction" checked={createForm.recteur_en_fonction === false} onChange={() => handleCreateChange('recteur_en_fonction', false)} /> Non</label>
@@ -2406,13 +2780,13 @@ function App() {
                         <div className="create-field">
                           <label className="create-label">Hors fonction depuis</label>
                           <div className="create-input-wrap">
-                            <input type="date" required className="create-input create-input-no-icon" value={createForm.recteur_hors_fonction_depuis} onChange={(e) => handleCreateChange('recteur_hors_fonction_depuis', e.target.value)} />
+                            <input type="date" className="create-input create-input-no-icon" value={createForm.recteur_hors_fonction_depuis} onChange={(e) => handleCreateChange('recteur_hors_fonction_depuis', e.target.value)} />
                           </div>
                         </div>
                         <div className="create-field">
                           <label className="create-label">Motif</label>
                           <div className="create-input-wrap">
-                            <input required className="create-input create-input-no-icon" value={createForm.recteur_hors_fonction_motif} onChange={(e) => handleCreateChange('recteur_hors_fonction_motif', e.target.value)} placeholder="Ex : démission, révocation…" />
+                            <input className="create-input create-input-no-icon" value={createForm.recteur_hors_fonction_motif} onChange={(e) => handleCreateChange('recteur_hors_fonction_motif', e.target.value)} placeholder="Ex : démission, révocation…" />
                           </div>
                         </div>
                       </>
@@ -2425,50 +2799,56 @@ function App() {
                   <div className="create-comite-label">Secrétaire Général Académique (SGA)</div>
                   <div className="create-grid">
                     <div className="create-field">
-                      <label className="create-label">Nom complet</label>
+                      <label className="create-label">Nom complet <span className="create-required">*</span></label>
                       <div className="create-input-wrap">
                         <svg className="create-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="14" height="14"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                        <input className="create-input" value={createForm.sga_nom} onChange={(e) => handleCreateChange('sga_nom', e.target.value)} placeholder="Nom du SGA" />
+                        <input className={`create-input${formErrors.sga_nom ? ' create-input-error' : ''}`} value={createForm.sga_nom} onChange={(e) => handleCreateChange('sga_nom', e.target.value)} placeholder="Nom du SGA" />
                       </div>
+                      {formErrors.sga_nom && <span className="create-error">{formErrors.sga_nom}</span>}
                     </div>
                     <div className="create-field">
-                      <label className="create-label">Sexe</label>
+                      <label className="create-label">Sexe <span className="create-required">*</span></label>
                       <div className="create-input-wrap">
-                        <select className="create-input create-select create-select-no-icon" value={createForm.sga_sexe} onChange={(e) => handleCreateChange('sga_sexe', e.target.value)}>
+                        <select className={`create-input create-select create-select-no-icon${formErrors.sga_sexe ? ' create-input-error' : ''}`} value={createForm.sga_sexe} onChange={(e) => handleCreateChange('sga_sexe', e.target.value)}>
                           <option value="">—</option>
                           <option value="M">Masculin</option>
                           <option value="F">Féminin</option>
                         </select>
                       </div>
+                      {formErrors.sga_sexe && <span className="create-error">{formErrors.sga_sexe}</span>}
                     </div>
                     <div className="create-field">
-                      <label className="create-label">Grade</label>
+                      <label className="create-label">Grade <span className="create-required">*</span></label>
                       <div className="create-input-wrap">
-                        <input className="create-input" value={createForm.sga_grade} onChange={(e) => handleCreateChange('sga_grade', e.target.value)} placeholder="ex : Chef de travaux" />
+                        <input className={`create-input${formErrors.sga_grade ? ' create-input-error' : ''}`} value={createForm.sga_grade} onChange={(e) => handleCreateChange('sga_grade', e.target.value)} placeholder="ex : Chef de travaux" />
                       </div>
+                      {formErrors.sga_grade && <span className="create-error">{formErrors.sga_grade}</span>}
                     </div>
                     <div className="create-field">
-                      <label className="create-label">Téléphone</label>
+                      <label className="create-label">Téléphone <span className="create-required">*</span></label>
                       <div className="create-input-wrap">
                         <svg className="create-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="14" height="14"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.73 9.7 19.79 19.79 0 01.67 1.1 2 2 0 012.65 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 7.64a16 16 0 006.29 6.29l.95-.95a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
-                        <input className="create-input" value={createForm.sga_telephone} onChange={(e) => handleCreateChange('sga_telephone', e.target.value)} placeholder="+243 …" />
+                        <input className={`create-input${formErrors.sga_telephone ? ' create-input-error' : ''}`} value={createForm.sga_telephone} onChange={(e) => handleCreateChange('sga_telephone', e.target.value)} placeholder="+243 …" />
                       </div>
+                      {formErrors.sga_telephone && <span className="create-error">{formErrors.sga_telephone}</span>}
                     </div>
                     <div className="create-field">
-                      <label className="create-label">Email</label>
+                      <label className="create-label">Email <span className="create-required">*</span></label>
                       <div className="create-input-wrap">
                         <svg className="create-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="14" height="14"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-                        <input type="email" className="create-input" value={createForm.sga_email} onChange={(e) => handleCreateChange('sga_email', e.target.value)} placeholder="sga@etab.cd" />
+                        <input type="email" className={`create-input${formErrors.sga_email ? ' create-input-error' : ''}`} value={createForm.sga_email} onChange={(e) => handleCreateChange('sga_email', e.target.value)} placeholder="sga@etab.cd" />
                       </div>
+                      {formErrors.sga_email && <span className="create-error">{formErrors.sga_email}</span>}
                     </div>
                     <div className="create-field">
-                      <label className="create-label">Arrêté de nomination</label>
-                      <input type="file" className="create-file-input" onChange={(e) => handleCreateChange('sga_arrete', e.target.files?.[0] || null)} />
+                      <label className="create-label">Arrêté de nomination <span className="create-required">*</span></label>
+                      <input type="file" className={`create-file-input${formErrors.sga_arrete ? ' create-input-error' : ''}`} required onChange={(e) => handleCreateChange('sga_arrete', e.target.files?.[0] || null)} />
                       {createForm.sga_arrete && <span className="create-doc-file">· {createForm.sga_arrete.name}</span>}
+                      {formErrors.sga_arrete && <span className="create-error">{formErrors.sga_arrete}</span>}
                     </div>
                     {/* SGA — En fonction */}
                     <div className="create-field col-full">
-                      <label className="create-label">En fonction ?</label>
+                      <label className="create-label">En fonction ? <span className="create-required">*</span></label>
                       <div style={{display:'flex',gap:'1.5rem'}}>
                         <label className="create-label-checkbox"><input type="radio" name="sga_en_fonction" checked={createForm.sga_en_fonction === true} onChange={() => handleCreateChange('sga_en_fonction', true)} /> Oui</label>
                         <label className="create-label-checkbox"><input type="radio" name="sga_en_fonction" checked={createForm.sga_en_fonction === false} onChange={() => handleCreateChange('sga_en_fonction', false)} /> Non</label>
@@ -2479,13 +2859,13 @@ function App() {
                         <div className="create-field">
                           <label className="create-label">Hors fonction depuis</label>
                           <div className="create-input-wrap">
-                            <input type="date" required className="create-input create-input-no-icon" value={createForm.sga_hors_fonction_depuis} onChange={(e) => handleCreateChange('sga_hors_fonction_depuis', e.target.value)} />
+                            <input type="date" className="create-input create-input-no-icon" value={createForm.sga_hors_fonction_depuis} onChange={(e) => handleCreateChange('sga_hors_fonction_depuis', e.target.value)} />
                           </div>
                         </div>
                         <div className="create-field">
                           <label className="create-label">Motif</label>
                           <div className="create-input-wrap">
-                            <input required className="create-input create-input-no-icon" value={createForm.sga_hors_fonction_motif} onChange={(e) => handleCreateChange('sga_hors_fonction_motif', e.target.value)} placeholder="Ex : démission, révocation…" />
+                            <input className="create-input create-input-no-icon" value={createForm.sga_hors_fonction_motif} onChange={(e) => handleCreateChange('sga_hors_fonction_motif', e.target.value)} placeholder="Ex : démission, révocation…" />
                           </div>
                         </div>
                       </>
@@ -2497,50 +2877,56 @@ function App() {
                   <div className="create-comite-label">Administrateur du Budget (AB)</div>
                   <div className="create-grid">
                     <div className="create-field">
-                      <label className="create-label">Nom complet</label>
+                      <label className="create-label">Nom complet <span className="create-required">*</span></label>
                       <div className="create-input-wrap">
                         <svg className="create-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="14" height="14"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                        <input className="create-input" value={createForm.ab_nom} onChange={(e) => handleCreateChange('ab_nom', e.target.value)} placeholder="Nom de l'AB" />
+                        <input className={`create-input${formErrors.ab_nom ? ' create-input-error' : ''}`} value={createForm.ab_nom} onChange={(e) => handleCreateChange('ab_nom', e.target.value)} placeholder="Nom de l'AB" />
                       </div>
+                      {formErrors.ab_nom && <span className="create-error">{formErrors.ab_nom}</span>}
                     </div>
                     <div className="create-field">
-                      <label className="create-label">Sexe</label>
+                      <label className="create-label">Sexe <span className="create-required">*</span></label>
                       <div className="create-input-wrap">
-                        <select className="create-input create-select create-select-no-icon" value={createForm.ab_sexe} onChange={(e) => handleCreateChange('ab_sexe', e.target.value)}>
+                        <select className={`create-input create-select create-select-no-icon${formErrors.ab_sexe ? ' create-input-error' : ''}`} value={createForm.ab_sexe} onChange={(e) => handleCreateChange('ab_sexe', e.target.value)}>
                           <option value="">—</option>
                           <option value="M">Masculin</option>
                           <option value="F">Féminin</option>
                         </select>
                       </div>
+                      {formErrors.ab_sexe && <span className="create-error">{formErrors.ab_sexe}</span>}
                     </div>
                     <div className="create-field">
-                      <label className="create-label">Grade</label>
+                      <label className="create-label">Grade <span className="create-required">*</span></label>
                       <div className="create-input-wrap">
-                        <input className="create-input" value={createForm.ab_grade} onChange={(e) => handleCreateChange('ab_grade', e.target.value)} placeholder="ex : Assistant" />
+                        <input className={`create-input${formErrors.ab_grade ? ' create-input-error' : ''}`} value={createForm.ab_grade} onChange={(e) => handleCreateChange('ab_grade', e.target.value)} placeholder="ex : Assistant" />
                       </div>
+                      {formErrors.ab_grade && <span className="create-error">{formErrors.ab_grade}</span>}
                     </div>
                     <div className="create-field">
-                      <label className="create-label">Téléphone</label>
+                      <label className="create-label">Téléphone <span className="create-required">*</span></label>
                       <div className="create-input-wrap">
                         <svg className="create-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="14" height="14"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.73 9.7 19.79 19.79 0 01.67 1.1 2 2 0 012.65 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 7.64a16 16 0 006.29 6.29l.95-.95a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
-                        <input className="create-input" value={createForm.ab_telephone} onChange={(e) => handleCreateChange('ab_telephone', e.target.value)} placeholder="+243 …" />
+                        <input className={`create-input${formErrors.ab_telephone ? ' create-input-error' : ''}`} value={createForm.ab_telephone} onChange={(e) => handleCreateChange('ab_telephone', e.target.value)} placeholder="+243 …" />
                       </div>
+                      {formErrors.ab_telephone && <span className="create-error">{formErrors.ab_telephone}</span>}
                     </div>
                     <div className="create-field">
-                      <label className="create-label">Email</label>
+                      <label className="create-label">Email <span className="create-required">*</span></label>
                       <div className="create-input-wrap">
                         <svg className="create-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="14" height="14"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-                        <input type="email" className="create-input" value={createForm.ab_email} onChange={(e) => handleCreateChange('ab_email', e.target.value)} placeholder="ab@etab.cd" />
+                        <input type="email" className={`create-input${formErrors.ab_email ? ' create-input-error' : ''}`} value={createForm.ab_email} onChange={(e) => handleCreateChange('ab_email', e.target.value)} placeholder="ab@etab.cd" />
                       </div>
+                      {formErrors.ab_email && <span className="create-error">{formErrors.ab_email}</span>}
                     </div>
                     <div className="create-field">
-                      <label className="create-label">Arrêté de nomination</label>
-                      <input type="file" className="create-file-input" onChange={(e) => handleCreateChange('ab_arrete', e.target.files?.[0] || null)} />
+                      <label className="create-label">Arrêté de nomination <span className="create-required">*</span></label>
+                      <input type="file" className={`create-file-input${formErrors.ab_arrete ? ' create-input-error' : ''}`} required onChange={(e) => handleCreateChange('ab_arrete', e.target.files?.[0] || null)} />
                       {createForm.ab_arrete && <span className="create-doc-file">· {createForm.ab_arrete.name}</span>}
+                      {formErrors.ab_arrete && <span className="create-error">{formErrors.ab_arrete}</span>}
                     </div>
                     {/* AB — En fonction */}
                     <div className="create-field col-full">
-                      <label className="create-label">En fonction ?</label>
+                      <label className="create-label">En fonction ? <span className="create-required">*</span></label>
                       <div style={{display:'flex',gap:'1.5rem'}}>
                         <label className="create-label-checkbox"><input type="radio" name="ab_en_fonction" checked={createForm.ab_en_fonction === true} onChange={() => handleCreateChange('ab_en_fonction', true)} /> Oui</label>
                         <label className="create-label-checkbox"><input type="radio" name="ab_en_fonction" checked={createForm.ab_en_fonction === false} onChange={() => handleCreateChange('ab_en_fonction', false)} /> Non</label>
@@ -2551,13 +2937,13 @@ function App() {
                         <div className="create-field">
                           <label className="create-label">Hors fonction depuis</label>
                           <div className="create-input-wrap">
-                            <input type="date" required className="create-input create-input-no-icon" value={createForm.ab_hors_fonction_depuis} onChange={(e) => handleCreateChange('ab_hors_fonction_depuis', e.target.value)} />
+                            <input type="date" className="create-input create-input-no-icon" value={createForm.ab_hors_fonction_depuis} onChange={(e) => handleCreateChange('ab_hors_fonction_depuis', e.target.value)} />
                           </div>
                         </div>
                         <div className="create-field">
                           <label className="create-label">Motif</label>
                           <div className="create-input-wrap">
-                            <input required className="create-input create-input-no-icon" value={createForm.ab_hors_fonction_motif} onChange={(e) => handleCreateChange('ab_hors_fonction_motif', e.target.value)} placeholder="Ex : démission, révocation…" />
+                            <input className="create-input create-input-no-icon" value={createForm.ab_hors_fonction_motif} onChange={(e) => handleCreateChange('ab_hors_fonction_motif', e.target.value)} placeholder="Ex : démission, révocation…" />
                           </div>
                         </div>
                       </>
@@ -2570,50 +2956,56 @@ function App() {
                   <div className="create-comite-label">Secrétaire Général à la Recherche (SGR)</div>
                   <div className="create-grid">
                     <div className="create-field">
-                      <label className="create-label">Nom complet</label>
+                      <label className="create-label">Nom complet <span className="create-required">*</span></label>
                       <div className="create-input-wrap">
                         <svg className="create-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="14" height="14"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                        <input className="create-input" value={createForm.sgr_nom} onChange={(e) => handleCreateChange('sgr_nom', e.target.value)} placeholder="Nom du SGR" />
+                        <input className={`create-input${formErrors.sgr_nom ? ' create-input-error' : ''}`} value={createForm.sgr_nom} onChange={(e) => handleCreateChange('sgr_nom', e.target.value)} placeholder="Nom du SGR" />
                       </div>
+                      {formErrors.sgr_nom && <span className="create-error">{formErrors.sgr_nom}</span>}
                     </div>
                     <div className="create-field">
-                      <label className="create-label">Sexe</label>
+                      <label className="create-label">Sexe <span className="create-required">*</span></label>
                       <div className="create-input-wrap">
-                        <select className="create-input create-select create-select-no-icon" value={createForm.sgr_sexe} onChange={(e) => handleCreateChange('sgr_sexe', e.target.value)}>
+                        <select className={`create-input create-select create-select-no-icon${formErrors.sgr_sexe ? ' create-input-error' : ''}`} value={createForm.sgr_sexe} onChange={(e) => handleCreateChange('sgr_sexe', e.target.value)}>
                           <option value="">—</option>
                           <option value="M">Masculin</option>
                           <option value="F">Féminin</option>
                         </select>
                       </div>
+                      {formErrors.sgr_sexe && <span className="create-error">{formErrors.sgr_sexe}</span>}
                     </div>
                     <div className="create-field">
-                      <label className="create-label">Grade</label>
+                      <label className="create-label">Grade <span className="create-required">*</span></label>
                       <div className="create-input-wrap">
-                        <input className="create-input" value={createForm.sgr_grade} onChange={(e) => handleCreateChange('sgr_grade', e.target.value)} placeholder="ex : Professeur" />
+                        <input className={`create-input${formErrors.sgr_grade ? ' create-input-error' : ''}`} value={createForm.sgr_grade} onChange={(e) => handleCreateChange('sgr_grade', e.target.value)} placeholder="ex : Professeur" />
                       </div>
+                      {formErrors.sgr_grade && <span className="create-error">{formErrors.sgr_grade}</span>}
                     </div>
                     <div className="create-field">
-                      <label className="create-label">Téléphone</label>
+                      <label className="create-label">Téléphone <span className="create-required">*</span></label>
                       <div className="create-input-wrap">
                         <svg className="create-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="14" height="14"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.73 9.7 19.79 19.79 0 01.67 1.1 2 2 0 012.65 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 7.64a16 16 0 006.29 6.29l.95-.95a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
-                        <input className="create-input" value={createForm.sgr_telephone} onChange={(e) => handleCreateChange('sgr_telephone', e.target.value)} placeholder="+243 …" />
+                        <input className={`create-input${formErrors.sgr_telephone ? ' create-input-error' : ''}`} value={createForm.sgr_telephone} onChange={(e) => handleCreateChange('sgr_telephone', e.target.value)} placeholder="+243 …" />
                       </div>
+                      {formErrors.sgr_telephone && <span className="create-error">{formErrors.sgr_telephone}</span>}
                     </div>
                     <div className="create-field">
-                      <label className="create-label">Email</label>
+                      <label className="create-label">Email <span className="create-required">*</span></label>
                       <div className="create-input-wrap">
                         <svg className="create-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="14" height="14"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-                        <input type="email" className="create-input" value={createForm.sgr_email} onChange={(e) => handleCreateChange('sgr_email', e.target.value)} placeholder="sgr@etab.cd" />
+                        <input type="email" className={`create-input${formErrors.sgr_email ? ' create-input-error' : ''}`} value={createForm.sgr_email} onChange={(e) => handleCreateChange('sgr_email', e.target.value)} placeholder="sgr@etab.cd" />
                       </div>
+                      {formErrors.sgr_email && <span className="create-error">{formErrors.sgr_email}</span>}
                     </div>
                     <div className="create-field">
-                      <label className="create-label">Arrêté de nomination</label>
-                      <input type="file" className="create-file-input" onChange={(e) => handleCreateChange('sgr_arrete', e.target.files?.[0] || null)} />
+                      <label className="create-label">Arrêté de nomination <span className="create-required">*</span></label>
+                      <input type="file" className={`create-file-input${formErrors.sgr_arrete ? ' create-input-error' : ''}`} required onChange={(e) => handleCreateChange('sgr_arrete', e.target.files?.[0] || null)} />
                       {createForm.sgr_arrete && <span className="create-doc-file">· {createForm.sgr_arrete.name}</span>}
+                      {formErrors.sgr_arrete && <span className="create-error">{formErrors.sgr_arrete}</span>}
                     </div>
                     {/* SGR — En fonction */}
                     <div className="create-field col-full">
-                      <label className="create-label">En fonction ?</label>
+                      <label className="create-label">En fonction ? <span className="create-required">*</span></label>
                       <div style={{display:'flex',gap:'1.5rem'}}>
                         <label className="create-label-checkbox"><input type="radio" name="sgr_en_fonction" checked={createForm.sgr_en_fonction === true} onChange={() => handleCreateChange('sgr_en_fonction', true)} /> Oui</label>
                         <label className="create-label-checkbox"><input type="radio" name="sgr_en_fonction" checked={createForm.sgr_en_fonction === false} onChange={() => handleCreateChange('sgr_en_fonction', false)} /> Non</label>
@@ -2624,13 +3016,13 @@ function App() {
                         <div className="create-field">
                           <label className="create-label">Hors fonction depuis</label>
                           <div className="create-input-wrap">
-                            <input type="date" required className="create-input create-input-no-icon" value={createForm.sgr_hors_fonction_depuis} onChange={(e) => handleCreateChange('sgr_hors_fonction_depuis', e.target.value)} />
+                            <input type="date" className="create-input create-input-no-icon" value={createForm.sgr_hors_fonction_depuis} onChange={(e) => handleCreateChange('sgr_hors_fonction_depuis', e.target.value)} />
                           </div>
                         </div>
                         <div className="create-field">
                           <label className="create-label">Motif</label>
                           <div className="create-input-wrap">
-                            <input required className="create-input create-input-no-icon" value={createForm.sgr_hors_fonction_motif} onChange={(e) => handleCreateChange('sgr_hors_fonction_motif', e.target.value)} placeholder="Ex : démission, révocation…" />
+                            <input className="create-input create-input-no-icon" value={createForm.sgr_hors_fonction_motif} onChange={(e) => handleCreateChange('sgr_hors_fonction_motif', e.target.value)} placeholder="Ex : démission, révocation…" />
                           </div>
                         </div>
                       </>
@@ -2659,10 +3051,11 @@ function App() {
                     { key: 'enseignants_femmes', label: 'Effectif d\'enseignants de sexe féminin' },
                   ].map(({ key, label }) => (
                     <div key={key} className="create-field">
-                      <label className="create-label">{label}</label>
+                      <label className="create-label">{label} <span className="create-required">*</span></label>
                       <div className="create-input-wrap">
-                        <input type="number" min="0" step="1" className="create-input create-input-no-icon" value={createForm[key]} onChange={(e) => handleCreateChange(key, e.target.value)} placeholder="0" />
+                        <input type="number" min="0" step="1" className={`create-input create-input-no-icon${formErrors[key] ? ' create-input-error' : ''}`} value={createForm[key]} onChange={(e) => handleCreateChange(key, e.target.value)} placeholder="0" />
                       </div>
+                      {formErrors[key] && <span className="create-error">{formErrors[key]}</span>}
                     </div>
                   ))}
 
@@ -2677,10 +3070,11 @@ function App() {
                     { key: 'personnel_scientifique_femmes', label: 'Effectif du personnel scientifique de sexe féminin' },
                   ].map(({ key, label }) => (
                     <div key={key} className="create-field">
-                      <label className="create-label">{label}</label>
+                      <label className="create-label">{label} <span className="create-required">*</span></label>
                       <div className="create-input-wrap">
-                        <input type="number" min="0" step="1" className="create-input create-input-no-icon" value={createForm[key]} onChange={(e) => handleCreateChange(key, e.target.value)} placeholder="0" />
+                        <input type="number" min="0" step="1" className={`create-input create-input-no-icon${formErrors[key] ? ' create-input-error' : ''}`} value={createForm[key]} onChange={(e) => handleCreateChange(key, e.target.value)} placeholder="0" />
                       </div>
+                      {formErrors[key] && <span className="create-error">{formErrors[key]}</span>}
                     </div>
                   ))}
 
@@ -2694,10 +3088,11 @@ function App() {
                     { key: 'agents_execution', label: 'Agents d\'exécution' },
                   ].map(({ key, label }) => (
                     <div key={key} className="create-field">
-                      <label className="create-label">{label}</label>
+                      <label className="create-label">{label} <span className="create-required">*</span></label>
                       <div className="create-input-wrap">
-                        <input type="number" min="0" step="1" className="create-input create-input-no-icon" value={createForm[key]} onChange={(e) => handleCreateChange(key, e.target.value)} placeholder="0" />
+                        <input type="number" min="0" step="1" className={`create-input create-input-no-icon${formErrors[key] ? ' create-input-error' : ''}`} value={createForm[key]} onChange={(e) => handleCreateChange(key, e.target.value)} placeholder="0" />
                       </div>
+                      {formErrors[key] && <span className="create-error">{formErrors[key]}</span>}
                     </div>
                   ))}
                 </div>
@@ -2717,7 +3112,8 @@ function App() {
 
                   {/* Filières — liste dynamique */}
                   <div className="create-field col-full">
-                    <label className="create-label">Filières Organisées</label>
+                    <label className="create-label">Filières Organisées <span className="create-required">*</span></label>
+                    {formErrors.filieres && <span className="create-error">{formErrors.filieres}</span>}
 
                     {createForm.filieres.length > 0 && (
                       <ul className="create-doc-list" style={{marginBottom:'0.75rem'}}>
@@ -2765,7 +3161,7 @@ function App() {
                         <div className="create-input-wrap" style={{flex:1}}>
                           <svg className="create-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="14" height="14"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg>
                           <input
-                            className="create-input"
+                            className={`create-input${formErrors.filieres ? ' create-input-error' : ''}`}
                             value={filiereForm.nom}
                             onChange={(e) => setFiliereForm((p) => ({ ...p, nom: e.target.value }))}
                             placeholder="Nom de la filière, ex : Informatique"
@@ -2838,7 +3234,8 @@ function App() {
 
                   {/* ── Accords de mobilités internationales ── */}
                   <div className="create-field col-full">
-                    <label className="create-label">Accords de mobilités internationales des étudiants</label>
+                    <label className="create-label">Accords de mobilité internationale des étudiants <span className="create-required">*</span></label>
+                    {formErrors.accords_mobilite && <span className="create-error">{formErrors.accords_mobilite}</span>}
 
                     {createForm.accords_mobilite.length > 0 && (
                       <ul className="create-doc-list" style={{marginBottom:'0.6rem'}}>
@@ -2858,7 +3255,7 @@ function App() {
                       <div className="create-input-wrap" style={{flex:1}}>
                         <svg className="create-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="14" height="14"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 010 20M12 2a15.3 15.3 0 000 20"/></svg>
                         <input
-                          className="create-input"
+                          className={`create-input${formErrors.accords_mobilite ? ' create-input-error' : ''}`}
                           value={accordDraft}
                           onChange={(e) => setAccordDraft(e.target.value)}
                           onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addAccordMobilite(); } }}
@@ -2874,7 +3271,7 @@ function App() {
 
                   {/* Niveaux d'études */}
                   <div className="create-field col-full">
-                    <label className="create-label">Niveaux d'études </label>
+                    <label className="create-label">Niveaux d'études <span className="create-required">*</span></label>
                     <div className="create-niveaux-row">
                       {[['licence', 'Licence'], ['master', 'Master'], ['doctorat', 'Doctorat']].map(([key, label]) => (
                         <label key={key} className="create-label-checkbox">
@@ -2888,19 +3285,21 @@ function App() {
                         </label>
                       ))}
                     </div>
+                    {formErrors.niveaux_etudes && <span className="create-error">{formErrors.niveaux_etudes}</span>}
                   </div>
 
                   {/* Autres niveaux */}
                   <div className="create-field col-full">
-                    <label className="create-label">Autres niveaux</label>
+                    <label className="create-label">Autres niveaux <span className="create-required">*</span></label>
                     <div className="create-input-wrap">
                       <input
-                        className="create-input create-input-no-icon"
+                        className={`create-input create-input-no-icon${formErrors.autres_niveaux ? ' create-input-error' : ''}`}
                         value={createForm.autres_niveaux}
                         onChange={(e) => handleCreateChange('autres_niveaux', e.target.value)}
                         placeholder="ex : DES, Certificat…"
                       />
                     </div>
+                    {formErrors.autres_niveaux && <span className="create-error">{formErrors.autres_niveaux}</span>}
                   </div>
 
                   {/* Effectifs */}
@@ -2911,18 +3310,19 @@ function App() {
                     { key: 'nombre_etudiants_lmd', label: 'Étudiants LMD (total)' },
                   ].map(({ key, label }) => (
                     <div key={key} className="create-field">
-                      <label className="create-label">{label}</label>
+                      <label className="create-label">{label} <span className="create-required">*</span></label>
                       <div className="create-input-wrap">
                         <input
                           type="number"
                           min="0"
                           step="1"
-                          className="create-input create-input-no-icon"
+                          className={`create-input create-input-no-icon${formErrors[key] ? ' create-input-error' : ''}`}
                           value={createForm[key]}
                           onChange={(e) => handleCreateChange(key, e.target.value)}
                           placeholder="0"
                         />
                       </div>
+                      {formErrors[key] && <span className="create-error">{formErrors[key]}</span>}
                     </div>
                   ))}
 
@@ -2943,22 +3343,23 @@ function App() {
 
                   {/* Titre de propriété — fichier, full width */}
                   <div className="create-field col-full">
-                    <label className="create-label">Etablissement a un titre de propriété immobilière</label>
+                    <label className="create-label">Etablissement a un titre de propriété immobilière <span className="create-required">*</span></label>
                     <input
                       type="file"
-                      className="create-file-input"
+                      className={`create-file-input${formErrors.titre_propriete_propriete ? ' create-input-error' : ''}`}
                       onChange={(e) => handleCreateChange('titre_propriete_propriete', e.target.files?.[0] || null)}
                     />
                     {createForm.titre_propriete_propriete && <span className="create-doc-file">· {createForm.titre_propriete_propriete.name}</span>}
+                    {formErrors.titre_propriete_propriete && <span className="create-error">{formErrors.titre_propriete_propriete}</span>}
                   </div>
 
                   {/* Résidences */}
                   <div className="create-field">
-                    <label className="create-label">Nombre des résidences pour le personnel</label>
+                    <label className="create-label">Nombre des résidences pour le personnel <span className="create-required">*</span></label>
                     <div className="create-input-wrap">
                       <svg className="create-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="14" height="14"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
                       <input
-                        className="create-input"
+                        className={`create-input${formErrors.nombre_residences_personnel ? ' create-input-error' : ''}`}
                         type="number"
                         min="0"
                         value={createForm.nombre_residences_personnel}
@@ -2966,14 +3367,15 @@ function App() {
                         placeholder="0"
                       />
                     </div>
+                    {formErrors.nombre_residences_personnel && <span className="create-error">{formErrors.nombre_residences_personnel}</span>}
                   </div>
 
                   <div className="create-field">
-                    <label className="create-label">Nombre des résidences estudiantines</label>
+                    <label className="create-label">Nombre des résidences estudiantines <span className="create-required">*</span></label>
                     <div className="create-input-wrap">
                       <svg className="create-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="14" height="14"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
                       <input
-                        className="create-input"
+                        className={`create-input${formErrors.nombre_residences_estudiantines ? ' create-input-error' : ''}`}
                         type="number"
                         min="0"
                         value={createForm.nombre_residences_estudiantines}
@@ -2981,72 +3383,78 @@ function App() {
                         placeholder="0"
                       />
                     </div>
+                    {formErrors.nombre_residences_estudiantines && <span className="create-error">{formErrors.nombre_residences_estudiantines}</span>}
                   </div>
 
                   {/* Est locataire */}
                   <div className="create-field col-full">
-                    <label className="create-label">L'établissement est locataire ?</label>
+                    <label className="create-label">L'établissement est locataire ? <span className="create-required">*</span></label>
                     <div style={{display:'flex',gap:'1.5rem',marginTop:'0.3rem'}}>
                       <label className="create-label-checkbox"><input type="radio" name="est_locataire" checked={createForm.est_locataire === true} onChange={() => handleCreateChange('est_locataire', true)} /> Oui</label>
                       <label className="create-label-checkbox"><input type="radio" name="est_locataire" checked={createForm.est_locataire === false} onChange={() => handleCreateChange('est_locataire', false)} /> Non</label>
                     </div>
+                    {formErrors.est_locataire && <span className="create-error">{formErrors.est_locataire}</span>}
                   </div>
 
                   {/* Biens sans titre foncier — textarea, full width */}
                   <div className="create-field col-full">
-                    <label className="create-label">Certaines propriétés ne sont pas couvertes par un titre foncier ? si oui, lesquelles ? </label>
+                    <label className="create-label">Certaines propriétés ne sont pas couvertes par un titre foncier ? si oui, lesquelles ? <span className="create-required">*</span></label>
                     <div className="create-input-wrap create-textarea-wrap">
                       <textarea
-                        className="create-input create-textarea"
+                        className={`create-input create-textarea${formErrors.biens_sans_titre_foncier ? ' create-input-error' : ''}`}
                         value={createForm.biens_sans_titre_foncier}
                         onChange={(e) => handleCreateChange('biens_sans_titre_foncier', e.target.value)}
                         placeholder="Description des biens sans titre foncier…"
                         rows={3}
                       />
                     </div>
+                    {formErrors.biens_sans_titre_foncier && <span className="create-error">{formErrors.biens_sans_titre_foncier}</span>}
                   </div>
 
                   {/* Responsable patrimoine nom */}
                   <div className="create-field">
-                    <label className="create-label">Responsable patrimoine — Nom</label>
+                    <label className="create-label">Responsable patrimoine — Nom <span className="create-required">*</span></label>
                     <div className="create-input-wrap">
                       <svg className="create-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="14" height="14"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                       <input
-                        className="create-input"
+                        className={`create-input${formErrors.responsable_patrimoine_nom ? ' create-input-error' : ''}`}
                         value={createForm.responsable_patrimoine_nom}
                         onChange={(e) => handleCreateChange('responsable_patrimoine_nom', e.target.value)}
                         placeholder="Nom du responsable"
                       />
                     </div>
+                    {formErrors.responsable_patrimoine_nom && <span className="create-error">{formErrors.responsable_patrimoine_nom}</span>}
                   </div>
 
                   {/* Responsable patrimoine téléphone */}
                   <div className="create-field">
-                    <label className="create-label">Téléphone du responsable patrimoine</label>
+                    <label className="create-label">Téléphone du responsable patrimoine <span className="create-required">*</span></label>
                     <div className="create-input-wrap">
                       <svg className="create-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="14" height="14"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.73 9.7 19.79 19.79 0 01.67 1.1 2 2 0 012.65 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 7.64a16 16 0 006.29 6.29l.95-.95a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
                       <input
-                        className="create-input"
+                        className={`create-input${formErrors.responsable_patrimoine_telephone ? ' create-input-error' : ''}`}
                         value={createForm.responsable_patrimoine_telephone}
                         onChange={(e) => handleCreateChange('responsable_patrimoine_telephone', e.target.value)}
                         placeholder="+243 …"
                       />
                     </div>
+                    {formErrors.responsable_patrimoine_telephone && <span className="create-error">{formErrors.responsable_patrimoine_telephone}</span>}
                   </div>
 
                   {/* Responsable patrimoine email */}
                   <div className="create-field">
-                    <label className="create-label">Email du responsable patrimoine</label>
+                    <label className="create-label">Email du responsable patrimoine <span className="create-required">*</span></label>
                     <div className="create-input-wrap">
                       <svg className="create-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="14" height="14"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
                       <input
                         type="email"
-                        className="create-input"
+                        className={`create-input${formErrors.responsable_patrimoine_email ? ' create-input-error' : ''}`}
                         value={createForm.responsable_patrimoine_email}
                         onChange={(e) => handleCreateChange('responsable_patrimoine_email', e.target.value)}
                         placeholder="patrimoine@etab.cd"
                       />
                     </div>
+                    {formErrors.responsable_patrimoine_email && <span className="create-error">{formErrors.responsable_patrimoine_email}</span>}
                   </div>
 
                 </div>
@@ -3066,7 +3474,7 @@ function App() {
 
                   {/* Organigramme existe */}
                   <div className="create-field col-full">
-                    <label className="create-label">Existence d'un cadre organique/organigramme approuvé par le tutelle ?</label>
+                    <label className="create-label">Existence d'un cadre organique/organigramme approuvé par la tutelle ?</label>
                     <div style={{display:'flex',gap:'1.5rem',marginTop:'0.3rem'}}>
                       <label className="create-label-checkbox"><input type="radio" name="organigramme_existe" checked={createForm.organigramme_existe === true} onChange={() => handleCreateChange('organigramme_existe', true)} /> Oui</label>
                       <label className="create-label-checkbox"><input type="radio" name="organigramme_existe" checked={createForm.organigramme_existe === false} onChange={() => handleCreateChange('organigramme_existe', false)} /> Non</label>
@@ -3088,7 +3496,7 @@ function App() {
 
                   {/* Audit interne */}
                   <div className="create-field col-full">
-                    <label className="create-label">Existance d'un mécanisme d'audit interne ?</label>
+                    <label className="create-label">Existence d'un mécanisme d'audit interne ?</label>
                     <div style={{display:'flex',gap:'1.5rem',marginTop:'0.3rem'}}>
                       <label className="create-label-checkbox"><input type="radio" name="audit_interne" checked={createForm.audit_interne === true} onChange={() => handleCreateChange('audit_interne', true)} /> Oui</label>
                       <label className="create-label-checkbox"><input type="radio" name="audit_interne" checked={createForm.audit_interne === false} onChange={() => handleCreateChange('audit_interne', false)} /> Non</label>
@@ -3111,7 +3519,7 @@ function App() {
                 <div className="create-grid">
 
                   <div className="create-field">
-                    <label className="create-label">Date dudernier contrôle viabilité</label>
+                    <label className="create-label">Date du dernier contrôle viabilité</label>
                     <div className="create-input-wrap">
                       <input
                         type="date"
@@ -3221,46 +3629,54 @@ function App() {
                           ))}
                         </ul>
                       )}
+                      {formErrors.marches_publics && (
+                        <div className="create-field col-full">
+                          <span className="create-error">{formErrors.marches_publics}</span>
+                        </div>
+                      )}
 
                       {/* formulaire ajout membre */}
                       <div className="create-field">
-                        <label className="create-label">Nom du membre</label>
+                        <label className="create-label">Nom du membre <span className="create-required">*</span></label>
                         <div className="create-input-wrap">
                           <svg className="create-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="14" height="14"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                           <input
-                            className="create-input"
+                            className={`create-input${formErrors.marche_nom ? ' create-input-error' : ''}`}
                             value={marcheForm.nom}
-                            onChange={(e) => setMarcheForm((p) => ({ ...p, nom: e.target.value }))}
+                            onChange={(e) => handleMarcheFormChange('nom', e.target.value)}
                             placeholder="Jean Mukendi"
                           />
                         </div>
+                        {formErrors.marche_nom && <span className="create-error">{formErrors.marche_nom}</span>}
                       </div>
 
                       <div className="create-field">
-                        <label className="create-label">Téléphone</label>
+                        <label className="create-label">Téléphone <span className="create-required">*</span></label>
                         <div className="create-input-wrap">
                           <svg className="create-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="14" height="14"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.73 9.7 19.79 19.79 0 01.67 1.1 2 2 0 012.65 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 7.64a16 16 0 006.29 6.29l.95-.95a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
                           <input
-                            className="create-input"
+                            className={`create-input${formErrors.marche_telephone ? ' create-input-error' : ''}`}
                             value={marcheForm.telephone}
-                            onChange={(e) => setMarcheForm((p) => ({ ...p, telephone: e.target.value }))}
+                            onChange={(e) => handleMarcheFormChange('telephone', e.target.value)}
                             placeholder="+243…"
                           />
                         </div>
+                        {formErrors.marche_telephone && <span className="create-error">{formErrors.marche_telephone}</span>}
                       </div>
 
                       <div className="create-field">
-                        <label className="create-label">Email</label>
+                        <label className="create-label">Email <span className="create-required">*</span></label>
                         <div className="create-input-wrap">
                           <svg className="create-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="14" height="14"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
                           <input
-                            className="create-input"
+                            className={`create-input${formErrors.marche_email ? ' create-input-error' : ''}`}
                             type="email"
                             value={marcheForm.email}
-                            onChange={(e) => setMarcheForm((p) => ({ ...p, email: e.target.value }))}
+                            onChange={(e) => handleMarcheFormChange('email', e.target.value)}
                             placeholder="exemple@domaine.com"
                           />
                         </div>
+                        {formErrors.marche_email && <span className="create-error">{formErrors.marche_email}</span>}
                       </div>
 
                       <div className="create-field" style={{alignSelf:'flex-end'}}>
@@ -3345,7 +3761,7 @@ function App() {
                     </button>
                   )}
                   {createStep < CREATE_STEPS[CREATE_STEPS.length - 1].num ? (
-                    <button type="button" className="create-btn-next" onClick={() => setCreateStep((s) => s + 1)}>
+                    <button type="button" className="create-btn-next" onClick={goToNextCreateStep}>
                       Suivant →
                     </button>
                   ) : (
@@ -3543,7 +3959,7 @@ function App() {
                 )}
                 {detailEtab.accords_mobilite && detailEtab.accords_mobilite.length > 0 && (
                   <div style={{marginTop:'0.75rem'}}>
-                    <div style={{fontSize:'0.72rem',fontWeight:700,color:'var(--slate-500)',textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:'0.4rem'}}>Accords de mobilités internationales</div>
+                    <div style={{fontSize:'0.72rem',fontWeight:700,color:'var(--slate-500)',textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:'0.4rem'}}>Accords de mobilité internationales</div>
                     <ul style={{listStyle:'none',padding:0,margin:0,display:'flex',flexDirection:'column',gap:'0.3rem'}}>
                       {detailEtab.accords_mobilite.map((a, i) => (
                         <li key={i} style={{display:'flex',alignItems:'center',gap:'0.5rem',fontSize:'0.8rem',color:'var(--slate-700)'}}>
@@ -4010,7 +4426,7 @@ function App() {
 
                 {/* Accords de mobilités internationales */}
                 <div className="create-field col-full edit-filieres-block">
-                  <div className="edit-filieres-label">Accords de mobilités internationales des étudiants</div>
+                  <div className="edit-filieres-label">Accords de mobilité internationale des étudiants</div>
                   {detailEditForm.accords_mobilite.map((a, i) => (
                     <div key={i} style={{display:'flex',gap:'0.5rem',alignItems:'center',marginBottom:'0.4rem'}}>
                       <div className="create-input-wrap" style={{flex:1}}>
@@ -4097,14 +4513,14 @@ function App() {
                 </div>
                 <div className="create-grid">
                   <div className="create-field col-full">
-                    <label className="create-label">Existence d'un cadre organique/organigramme approuvé par le tutelle ?</label>
+                    <label className="create-label">Existence d'un cadre organique/organigramme approuvé par la tutelle ?</label>
                     <div style={{display:'flex',gap:'1.5rem',marginTop:'0.3rem'}}>
                       <label className="create-label-checkbox"><input type="radio" name="edit_organigramme_existe" checked={detailEditForm.organigramme_existe === true} onChange={() => handleDetailEditChange('organigramme_existe', true)} /> Oui</label>
                       <label className="create-label-checkbox"><input type="radio" name="edit_organigramme_existe" checked={detailEditForm.organigramme_existe === false} onChange={() => handleDetailEditChange('organigramme_existe', false)} /> Non</label>
                     </div>
                   </div>
                   <div className="create-field col-full">
-                    <label className="create-label">Existance d'un mécanisme d'audit interne ?</label>
+                    <label className="create-label">Existence d'un mécanisme d'audit interne ?</label>
                     <div style={{display:'flex',gap:'1.5rem',marginTop:'0.3rem'}}>
                       <label className="create-label-checkbox"><input type="radio" name="edit_audit_interne" checked={detailEditForm.audit_interne === true} onChange={() => handleDetailEditChange('audit_interne', true)} /> Oui</label>
                       <label className="create-label-checkbox"><input type="radio" name="edit_audit_interne" checked={detailEditForm.audit_interne === false} onChange={() => handleDetailEditChange('audit_interne', false)} /> Non</label>
@@ -4319,10 +4735,6 @@ function App() {
                     <label>
                       <span className="label-text">Téléphone</span>
                       <input value={updateForm.telephone} onChange={(e) => handleUpdateChange('telephone', e.target.value)} />
-                    </label>
-                    <label>
-                      <span className="label-text">Responsable</span>
-                      <input value={updateForm.responsable} onChange={(e) => handleUpdateChange('responsable', e.target.value)} />
                     </label>
                     <label>
                       <span className="label-text">Description</span>
