@@ -30,6 +30,7 @@ const CREATE_STEPS = [
   { num: 10, label: 'École doctorale' },
   { num: 11, label: 'Marchés publics' },
   { num: 12, label: 'Soumissionnaire' },
+  { num: 13, label: 'Récapitulatif' },
 ];
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'https://admin.cgiibnn-esursi.cd/';
@@ -64,6 +65,9 @@ function normalizeEtablissement(item) {
     ...item,
     id: item.id,
     nom_etablissement: item.nom_etablissement || item.nom || item.name || '',
+    nom_promoteur: item.nom_promoteur || '',
+    telephone_promoteur: item.telephone_promoteur || '',
+    email_promoteur: item.email_promoteur || '',
     sigle_etablissement: item.sigle_etablissement || item.sigle || '',
     statut: (item.statut || '').toLowerCase(),
     etat: item.etat || 'soumis',
@@ -143,9 +147,11 @@ function normalizeEtablissement(item) {
     master: Boolean(item.master),
     doctorat: Boolean(item.doctorat),
     autres_niveaux: item.autres_niveaux || '',
+    definir_effectifs: item.definir_effectifs != null ? String(item.definir_effectifs) : '',
     effectif_licence_total: item.effectif_licence_total != null ? String(item.effectif_licence_total) : '',
     effectif_master_total: item.effectif_master_total != null ? String(item.effectif_master_total) : '',
     effectif_doctorat_total: item.effectif_doctorat_total != null ? String(item.effectif_doctorat_total) : '',
+    effectif_etudiants_handicap_total: item.effectif_etudiants_handicap_total != null ? String(item.effectif_etudiants_handicap_total) : '',
     nombre_etudiants_lmd: item.nombre_etudiants_lmd != null ? String(item.nombre_etudiants_lmd) : '',
     titre_propriete_propriete: item.titre_propriete_propriete || null,
     nombre_residences_personnel: item.nombre_residences_personnel != null ? String(item.nombre_residences_personnel) : '',
@@ -163,6 +169,9 @@ function normalizeEtablissement(item) {
     date_dernier_controle_scolarite: item.date_dernier_controle_scolarite || '',
     ecole_doctorale: Boolean(item.ecole_doctorale),
     acte_ecole_doctorale: item.acte_ecole_doctorale || null,
+    filiere_organisee_doctorale: Array.isArray(item.filiere_organisee_doctorale)
+      ? item.filiere_organisee_doctorale.map((f) => ({ id: f.id || '', nom: f.nom || '' }))
+      : [],
     cellule_marches_publics: Boolean(item.cellule_marches_publics),
     marches_publics: Array.isArray(item.marches_publics)
       ? item.marches_publics.map((m) => ({ nom: m.nom || '', telephone: m.telephone || '', email: m.email || '' }))
@@ -171,12 +180,19 @@ function normalizeEtablissement(item) {
       ? item.accords_mobilite.map((a) => ({ accord: a.accord || '' }))
       : [],
     description: item.description || '',
+    soumissionnaire_nom: item.soumissionnaire_nom || '',
+    soumissionnaire_email: item.soumissionnaire_email || '',
+    soumissionnaire_telephone: item.soumissionnaire_telephone || '',
+    qualite_du_soumissionnaire: item.qualite_du_soumissionnaire || '',
   };
 }
 
 function emptyCreateForm() {
   return {
     nom_etablissement: '',
+    nom_promoteur: '',
+    telephone_promoteur: '',
+    email_promoteur: '',
     sigle_etablissement: '',
     statut: 'public',
     etat: 'soumis',
@@ -249,11 +265,13 @@ function emptyCreateForm() {
     licence: false,
     master: false,
     doctorat: false,
-    autres_niveaux: '',
     effectif_licence_total: '',
     effectif_master_total: '',
     effectif_doctorat_total: '',
+    effectif_etudiants_handicap_total: '',
     nombre_etudiants_lmd: '',
+    autres_niveaux: '',
+    definir_effectifs: '',
     titre_propriete_propriete: null,
     nombre_residences_personnel: '',
     nombre_residences_estudiantines: '',
@@ -268,8 +286,10 @@ function emptyCreateForm() {
     date_dernier_controle_viabilite: '',
     date_dernier_controle_gestion: '',
     date_dernier_controle_scolarite: '',
+    nombre_dossiers_finalistes_controles: '',
     ecole_doctorale: false,
     acte_ecole_doctorale: null,
+    filiere_organisee_doctorale: [],
     cellule_marches_publics: false,
     marches_publics: [],
     accords_mobilite: [],
@@ -277,6 +297,7 @@ function emptyCreateForm() {
     soumissionnaire_nom: '',
     soumissionnaire_email: '',
     soumissionnaire_telephone: '',
+    qualite_du_soumissionnaire: '',
   };
 }
 
@@ -336,11 +357,13 @@ const CREATE_FIELD_STEPS = {
   filieres: 6,
   accords_mobilite: 6,
   niveaux_etudes: 6,
-  autres_niveaux: 6,
   effectif_licence_total: 6,
   effectif_master_total: 6,
   effectif_doctorat_total: 6,
+  effectif_etudiants_handicap_total: 6,
   nombre_etudiants_lmd: 6,
+  autres_niveaux: 6,
+  definir_effectifs: 6,
   titre_propriete_propriete: 7,
   nombre_residences_personnel: 7,
   nombre_residences_estudiantines: 7,
@@ -356,10 +379,14 @@ const CREATE_FIELD_STEPS = {
   soumissionnaire_nom: 12,
   soumissionnaire_email: 12,
   soumissionnaire_telephone: 12,
+  qualite_du_soumissionnaire: 12,
 };
 
 const CREATE_FIELD_LABELS = {
   nom_etablissement: 'Nom de l\'établissement',
+  nom_promoteur: 'Nom du promoteur',
+  telephone_promoteur: 'Téléphone du promoteur',
+  email_promoteur: 'Email du promoteur',
   sigle_etablissement: 'Sigle de l\'établissement',
   statut: 'Statut',
   acte_prise_en_charge: 'Acte de prise en charge',
@@ -414,11 +441,13 @@ const CREATE_FIELD_LABELS = {
   filieres: 'Filière organisée',
   accords_mobilite: 'Accords de mobilité internationale des étudiants',
   niveaux_etudes: 'Niveaux d\'études',
-  autres_niveaux: 'Autres niveaux',
   effectif_licence_total: 'Effectif Licence (total)',
   effectif_master_total: 'Effectif Master (total)',
   effectif_doctorat_total: 'Effectif Doctorat (total)',
+  effectif_etudiants_handicap_total: 'Effectif d\'étudiants vivant avec un handicap',
   nombre_etudiants_lmd: 'Étudiants LMD (total)',
+  autres_niveaux: 'Autres niveaux',
+  definir_effectifs: 'Effectif des autres niveaux',
   titre_propriete_propriete: 'Titre de propriété immobilière',
   nombre_residences_personnel: 'Nombre des résidences pour le personnel',
   nombre_residences_estudiantines: 'Nombre des résidences estudiantines',
@@ -427,6 +456,10 @@ const CREATE_FIELD_LABELS = {
   responsable_patrimoine_nom: 'Responsable patrimoine — Nom',
   responsable_patrimoine_telephone: 'Téléphone du responsable patrimoine',
   responsable_patrimoine_email: 'Email du responsable patrimoine',
+  date_dernier_controle_viabilite: 'Date du dernier contrôle viabilité',
+  date_dernier_controle_gestion: 'Date du dernier contrôle gestion',
+  date_dernier_controle_scolarite: 'Date du dernier contrôle scolarité',
+  nombre_dossiers_finalistes_controles: 'Nombre de dossiers finalistes contrôlés',
   marches_publics: 'Membre de la cellule marchés publics',
   marche_nom: 'Nom du membre',
   marche_telephone: 'Téléphone du membre',
@@ -434,6 +467,7 @@ const CREATE_FIELD_LABELS = {
   soumissionnaire_nom: 'Nom complet',
   soumissionnaire_email: 'Adresse e-mail',
   soumissionnaire_telephone: 'Téléphone',
+  qualite_du_soumissionnaire: 'Qualité du soumissionnaire',
 };
 
 const COMITE_REQUIRED_FIELDS = [
@@ -464,6 +498,20 @@ function validateCreateForm(form) {
 
   if (!form.nom_etablissement.trim()) {
     errors.nom_etablissement = requiredFieldMessage('nom_etablissement');
+  }
+  // Promoter fields are only required if status is private
+  if (isPrivate) {
+    if (!form.nom_promoteur.trim()) {
+      errors.nom_promoteur = requiredFieldMessage('nom_promoteur');
+    }
+    if (!form.telephone_promoteur.trim()) {
+      errors.telephone_promoteur = requiredFieldMessage('telephone_promoteur');
+    }
+    if (!form.email_promoteur.trim()) {
+      errors.email_promoteur = requiredFieldMessage('email_promoteur');
+    } else if (!emailRegex.test(form.email_promoteur)) {
+      errors.email_promoteur = invalidEmailMessage('email_promoteur');
+    }
   }
   if (!form.sigle_etablissement.trim()) {
     errors.sigle_etablissement = requiredFieldMessage('sigle_etablissement');
@@ -537,28 +585,31 @@ function validateCreateForm(form) {
   if (!form.licence && !form.master && !form.doctorat) {
     errors.niveaux_etudes = requiredFieldMessage('niveaux_etudes');
   }
-  ['autres_niveaux', 'effectif_licence_total', 'effectif_master_total', 'effectif_doctorat_total', 'nombre_etudiants_lmd'].forEach((field) => {
+  ['effectif_licence_total', 'effectif_master_total', 'effectif_doctorat_total', 'effectif_etudiants_handicap_total', 'nombre_etudiants_lmd', 'autres_niveaux', 'definir_effectifs'].forEach((field) => {
     if (form[field] === '' || form[field] == null) {
       errors[field] = requiredFieldMessage(field);
     }
   });
-  if (!form.titre_propriete_propriete) {
-    errors.titre_propriete_propriete = requiredFieldMessage('titre_propriete_propriete');
-  }
-  ['nombre_residences_personnel', 'nombre_residences_estudiantines'].forEach((field) => {
-    if (form[field] === '' || form[field] == null) {
-      errors[field] = requiredFieldMessage(field);
+  // Validation patrimoine: seulement pour établissements non-privés
+  if (!isPrivate) {
+    if (!form.titre_propriete_propriete) {
+      errors.titre_propriete_propriete = requiredFieldMessage('titre_propriete_propriete');
     }
-  });
-  if (form.est_locataire !== true && form.est_locataire !== false) {
-    errors.est_locataire = requiredFieldMessage('est_locataire');
-  }
-  ['biens_sans_titre_foncier', 'responsable_patrimoine_nom', 'responsable_patrimoine_telephone', 'responsable_patrimoine_email'].forEach((field) => {
-    if (!form[field].trim()) {
-      errors[field] = requiredFieldMessage(field);
+    ['nombre_residences_personnel', 'nombre_residences_estudiantines'].forEach((field) => {
+      if (form[field] === '' || form[field] == null) {
+        errors[field] = requiredFieldMessage(field);
+      }
+    });
+    if (form.est_locataire !== true && form.est_locataire !== false) {
+      errors.est_locataire = requiredFieldMessage('est_locataire');
     }
-  });
-  if (form.responsable_patrimoine_email && !emailRegex.test(form.responsable_patrimoine_email)) {
+    ['biens_sans_titre_foncier', 'responsable_patrimoine_nom', 'responsable_patrimoine_telephone', 'responsable_patrimoine_email'].forEach((field) => {
+      if (!form[field].trim()) {
+        errors[field] = requiredFieldMessage(field);
+      }
+    });
+  }
+  if (!isPrivate && form.responsable_patrimoine_email && !emailRegex.test(form.responsable_patrimoine_email)) {
     errors.responsable_patrimoine_email = invalidEmailMessage('responsable_patrimoine_email');
   }
   if (form.cellule_marches_publics) {
@@ -589,6 +640,9 @@ function validateCreateForm(form) {
   }
   if (!form.soumissionnaire_telephone.trim()) {
     errors.soumissionnaire_telephone = requiredFieldMessage('soumissionnaire_telephone');
+  }
+  if (!form.qualite_du_soumissionnaire.trim()) {
+    errors.qualite_du_soumissionnaire = requiredFieldMessage('qualite_du_soumissionnaire');
   }
 
   return errors;
@@ -644,6 +698,9 @@ function buildListQuery(filters, page, pageSize) {
 function buildCreateJsonPayload(form) {
   return {
     nom_etablissement: form.nom_etablissement,
+    nom_promoteur: form.nom_promoteur,
+    telephone_promoteur: form.telephone_promoteur,
+    email_promoteur: form.email_promoteur,
     sigle_etablissement: form.sigle_etablissement,
     statut: form.statut,
     etat: form.etat,
@@ -707,11 +764,13 @@ function buildCreateJsonPayload(form) {
     licence: form.licence,
     master: form.master,
     doctorat: form.doctorat,
-    autres_niveaux: form.autres_niveaux,
     effectif_licence_total: form.effectif_licence_total !== '' ? parseInt(form.effectif_licence_total, 10) : null,
     effectif_master_total: form.effectif_master_total !== '' ? parseInt(form.effectif_master_total, 10) : null,
     effectif_doctorat_total: form.effectif_doctorat_total !== '' ? parseInt(form.effectif_doctorat_total, 10) : null,
+    effectif_etudiants_handicap_total: form.effectif_etudiants_handicap_total !== '' ? parseInt(form.effectif_etudiants_handicap_total, 10) : null,
     nombre_etudiants_lmd: form.nombre_etudiants_lmd !== '' ? parseInt(form.nombre_etudiants_lmd, 10) : null,
+    autres_niveaux: form.autres_niveaux,
+    definir_effectifs: form.definir_effectifs !== '' ? parseInt(form.definir_effectifs, 10) : null,
     nombre_residences_personnel: form.nombre_residences_personnel !== '' ? parseInt(form.nombre_residences_personnel, 10) : null,
     nombre_residences_estudiantines: form.nombre_residences_estudiantines !== '' ? parseInt(form.nombre_residences_estudiantines, 10) : null,
     est_locataire: form.est_locataire,
@@ -724,19 +783,53 @@ function buildCreateJsonPayload(form) {
     date_dernier_controle_viabilite: form.date_dernier_controle_viabilite,
     date_dernier_controle_gestion: form.date_dernier_controle_gestion,
     date_dernier_controle_scolarite: form.date_dernier_controle_scolarite,
+    nombre_dossiers_finalistes_controles: form.nombre_dossiers_finalistes_controles ? parseInt(form.nombre_dossiers_finalistes_controles) : null,
     ecole_doctorale: form.ecole_doctorale,
+    filiere_organisee_doctorale: form.filiere_organisee_doctorale,
     cellule_marches_publics: form.cellule_marches_publics,
     marches_publics: form.marches_publics,
     description: form.description,
     soumissionnaire_nom: form.soumissionnaire_nom,
     soumissionnaire_email: form.soumissionnaire_email,
     soumissionnaire_telephone: form.soumissionnaire_telephone,
+    qualite_du_soumissionnaire: form.qualite_du_soumissionnaire,
   };
+}
+
+// Helper function to append nested arrays to FormData using bracket notation
+function appendNestedArrayToFormData(formData, fieldName, arrayData) {
+  if (!Array.isArray(arrayData) || arrayData.length === 0) return;
+  
+  arrayData.forEach((item, index) => {
+    if (typeof item === 'object' && item !== null) {
+      Object.keys(item).forEach((key) => {
+        if (Array.isArray(item[key])) {
+          // Handle nested arrays (e.g., effectifs within filieres)
+          item[key].forEach((subItem, subIndex) => {
+            if (typeof subItem === 'object' && subItem !== null) {
+              Object.keys(subItem).forEach((subKey) => {
+                formData.append(`${fieldName}[${index}][${key}][${subIndex}][${subKey}]`, subItem[subKey]);
+              });
+            } else {
+              formData.append(`${fieldName}[${index}][${key}][${subIndex}]`, subItem);
+            }
+          });
+        } else {
+          formData.append(`${fieldName}[${index}][${key}]`, item[key]);
+        }
+      });
+    } else {
+      formData.append(`${fieldName}[${index}]`, item);
+    }
+  });
 }
 
 function buildCreateMultipartPayload(form) {
   const formData = new FormData();
   formData.append('nom_etablissement', form.nom_etablissement);
+  formData.append('nom_promoteur', form.nom_promoteur);
+  formData.append('telephone_promoteur', form.telephone_promoteur);
+  formData.append('email_promoteur', form.email_promoteur);
   formData.append('sigle_etablissement', form.sigle_etablissement);
   formData.append('statut', form.statut);
   formData.append('etat', form.etat);
@@ -805,16 +898,23 @@ function buildCreateMultipartPayload(form) {
   if (form.cadres_commandement !== '') formData.append('cadres_commandement', form.cadres_commandement);
   if (form.cadres_collaboration !== '') formData.append('cadres_collaboration', form.cadres_collaboration);
   if (form.agents_execution !== '') formData.append('agents_execution', form.agents_execution);
-  if (form.filieres.length) formData.append('filieres', JSON.stringify(form.filieres));
-  if (form.accords_mobilite.length) formData.append('accords_mobilite', JSON.stringify(form.accords_mobilite));
+  
+  // Append nested arrays using bracket notation for proper multipart parsing
+  appendNestedArrayToFormData(formData, 'filieres', form.filieres);
+  appendNestedArrayToFormData(formData, 'accords_mobilite', form.accords_mobilite);
+  appendNestedArrayToFormData(formData, 'marches_publics', form.marches_publics);
+  appendNestedArrayToFormData(formData, 'filiere_organisee_doctorale', form.filiere_organisee_doctorale);
+  
   formData.append('licence', String(form.licence));
   formData.append('master', String(form.master));
   formData.append('doctorat', String(form.doctorat));
-  formData.append('autres_niveaux', form.autres_niveaux);
   if (form.effectif_licence_total !== '') formData.append('effectif_licence_total', form.effectif_licence_total);
   if (form.effectif_master_total !== '') formData.append('effectif_master_total', form.effectif_master_total);
   if (form.effectif_doctorat_total !== '') formData.append('effectif_doctorat_total', form.effectif_doctorat_total);
+  if (form.effectif_etudiants_handicap_total !== '') formData.append('effectif_etudiants_handicap_total', form.effectif_etudiants_handicap_total);
   if (form.nombre_etudiants_lmd !== '') formData.append('nombre_etudiants_lmd', form.nombre_etudiants_lmd);
+  formData.append('autres_niveaux', form.autres_niveaux);
+  if (form.definir_effectifs !== '') formData.append('definir_effectifs', form.definir_effectifs);
   if (form.titre_propriete_propriete) formData.append('titre_propriete_propriete', form.titre_propriete_propriete, form.titre_propriete_propriete.name);
   if (form.nombre_residences_personnel !== '') formData.append('nombre_residences_personnel', form.nombre_residences_personnel);
   if (form.nombre_residences_estudiantines !== '') formData.append('nombre_residences_estudiantines', form.nombre_residences_estudiantines);
@@ -829,22 +929,27 @@ function buildCreateMultipartPayload(form) {
   if (form.date_dernier_controle_viabilite) formData.append('date_dernier_controle_viabilite', form.date_dernier_controle_viabilite);
   if (form.date_dernier_controle_gestion) formData.append('date_dernier_controle_gestion', form.date_dernier_controle_gestion);
   if (form.date_dernier_controle_scolarite) formData.append('date_dernier_controle_scolarite', form.date_dernier_controle_scolarite);
+  if (form.nombre_dossiers_finalistes_controles) formData.append('nombre_dossiers_finalistes_controles', form.nombre_dossiers_finalistes_controles);
   formData.append('ecole_doctorale', String(form.ecole_doctorale));
   if (form.acte_ecole_doctorale) formData.append('acte_ecole_doctorale', form.acte_ecole_doctorale, form.acte_ecole_doctorale.name);
   formData.append('cellule_marches_publics', String(form.cellule_marches_publics));
-  if (form.marches_publics.length) formData.append('marches_publics', JSON.stringify(form.marches_publics));
   formData.append('description', form.description);
   formData.append('soumissionnaire_nom', form.soumissionnaire_nom);
   formData.append('soumissionnaire_email', form.soumissionnaire_email);
   formData.append('soumissionnaire_telephone', form.soumissionnaire_telephone);
+  formData.append('qualite_du_soumissionnaire', form.qualite_du_soumissionnaire);
 
   return formData;
 }
+
 
 function mapToUpdateForm(item) {
   return {
     id: item.id,
     nom_etablissement: item.nom_etablissement || '',
+    nom_promoteur: item.nom_promoteur || '',
+    telephone_promoteur: item.telephone_promoteur || '',
+    email_promoteur: item.email_promoteur || '',
     sigle_etablissement: item.sigle_etablissement || '',
     statut: item.statut || 'public',
     etat: item.etat || 'soumis',
@@ -918,6 +1023,7 @@ function mapToUpdateForm(item) {
     master: Boolean(item.master),
     doctorat: Boolean(item.doctorat),
     autres_niveaux: item.autres_niveaux || '',
+    definir_effectifs: item.definir_effectifs != null ? String(item.definir_effectifs) : '',
     effectif_licence_total: item.effectif_licence_total != null ? String(item.effectif_licence_total) : '',
     effectif_master_total: item.effectif_master_total != null ? String(item.effectif_master_total) : '',
     effectif_doctorat_total: item.effectif_doctorat_total != null ? String(item.effectif_doctorat_total) : '',
@@ -935,7 +1041,11 @@ function mapToUpdateForm(item) {
     date_dernier_controle_viabilite: item.date_dernier_controle_viabilite || '',
     date_dernier_controle_gestion: item.date_dernier_controle_gestion || '',
     date_dernier_controle_scolarite: item.date_dernier_controle_scolarite || '',
+    nombre_dossiers_finalistes_controles: item.nombre_dossiers_finalistes_controles != null ? String(item.nombre_dossiers_finalistes_controles) : '',
     ecole_doctorale: Boolean(item.ecole_doctorale),
+    filiere_organisee_doctorale: Array.isArray(item.filiere_organisee_doctorale)
+      ? item.filiere_organisee_doctorale.map((f) => ({ id: f.id || '', nom: f.nom || '' }))
+      : [],
     cellule_marches_publics: Boolean(item.cellule_marches_publics),
     marches_publics: Array.isArray(item.marches_publics)
       ? item.marches_publics.map((m) => ({ nom: m.nom || '', telephone: m.telephone || '', email: m.email || '' }))
@@ -947,6 +1057,7 @@ function mapToUpdateForm(item) {
     soumissionnaire_nom: item.soumissionnaire_nom || '',
     soumissionnaire_email: item.soumissionnaire_email || '',
     soumissionnaire_telephone: item.soumissionnaire_telephone || '',
+    qualite_du_soumissionnaire: item.qualite_du_soumissionnaire || '',
   };
 }
 
@@ -980,9 +1091,9 @@ function buildPatchJsonPayload(current, original) {
     'chefs_travaux', 'assistants', 'charges_pratiques_professionnelles',
     'personnel_scientifique_femmes',
     'cadres_commandement', 'cadres_collaboration', 'agents_execution',
-    'autres_niveaux',
     'licence', 'master', 'doctorat',
-    'effectif_licence_total', 'effectif_master_total', 'effectif_doctorat_total', 'nombre_etudiants_lmd',
+    'effectif_licence_total', 'effectif_master_total', 'effectif_doctorat_total', 'effectif_etudiants_handicap_total', 'nombre_etudiants_lmd',
+    'autres_niveaux', 'definir_effectifs',
     'nombre_residences_personnel', 'nombre_residences_estudiantines',
     'est_locataire', 'biens_sans_titre_foncier',
     'responsable_patrimoine_nom', 'responsable_patrimoine_telephone', 'responsable_patrimoine_email',
@@ -993,6 +1104,7 @@ function buildPatchJsonPayload(current, original) {
     'soumissionnaire_nom',
     'soumissionnaire_email',
     'soumissionnaire_telephone',
+    'qualite_du_soumissionnaire',
   ];
 
   const boolFields = new Set([
@@ -1016,6 +1128,10 @@ function buildPatchJsonPayload(current, original) {
 
   if (JSON.stringify(current.filieres) !== JSON.stringify(original.filieres)) {
     payload.filieres = current.filieres;
+  }
+
+  if (JSON.stringify(current.filiere_organisee_doctorale) !== JSON.stringify(original.filiere_organisee_doctorale)) {
+    payload.filiere_organisee_doctorale = current.filiere_organisee_doctorale;
   }
 
   if (JSON.stringify(current.accords_mobilite) !== JSON.stringify(original.accords_mobilite)) {
@@ -1395,11 +1511,12 @@ function App() {
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
   const etablissements = filteredAll.slice((page - 1) * pageSize, page * pageSize);
 
-  const [createForm, setCreateForm] = useState(emptyCreateForm);
+  const [createForm, setCreateForm] = useState(emptyCreateForm());
   const isPrivateCreate = createForm.statut === 'prive';
   const [marcheForm, setMarcheForm] = useState({ nom: '', telephone: '', email: '' });
   const [filiereForm, setFiliereForm] = useState({ nom: '', effectifs: [] });
   const [effectifDraftForm, setEffectifDraftForm] = useState({ annee: '', total: '', masculin: '', feminin: '' });
+  const [filiereDoctoraleDraft, setFiliereDoctoraleDraft] = useState({ nom: '' });
   const [accordDraft, setAccordDraft] = useState('');
   const [formErrors, setFormErrors] = useState({});
   const [detectingGeo, setDetectingGeo] = useState(false);
@@ -1424,6 +1541,7 @@ function App() {
   const [detailEditForm, setDetailEditForm] = useState(null);
   const [detailEditOriginal, setDetailEditOriginal] = useState(null);
   const [detailEditFiles, setDetailEditFiles] = useState({});
+  const [detailFiliereDoctoraleDraft, setDetailFiliereDoctoraleDraft] = useState('');
   const [savingDetail, setSavingDetail] = useState(false);
 
   function showMessage(type, text) {
@@ -1568,7 +1686,7 @@ function App() {
   }
 
   function goToNextCreateStep() {
-    const nextStep = Math.min(createStep + 1, CREATE_STEPS[CREATE_STEPS.length - 1].num);
+    let nextStep = Math.min(createStep + 1, CREATE_STEPS[CREATE_STEPS.length - 1].num);
     if (!validateCreateProgress(nextStep)) return;
     setCreateStep(nextStep);
   }
@@ -1667,6 +1785,24 @@ function App() {
     }));
   }
 
+  function addFiliereDoctorale() {
+    const nom = filiereDoctoraleDraft.nom.trim();
+    if (!nom) return;
+    setCreateForm((prev) => ({
+      ...prev,
+      filiere_organisee_doctorale: [...prev.filiere_organisee_doctorale, { nom }],
+    }));
+    setFormErrors((prev) => ({ ...prev, filiere_doctorale: '' }));
+    setFiliereDoctoraleDraft({ nom: '' });
+  }
+
+  function removeFiliereDoctorale(index) {
+    setCreateForm((prev) => ({
+      ...prev,
+      filiere_organisee_doctorale: prev.filiere_organisee_doctorale.filter((_, i) => i !== index),
+    }));
+  }
+
 
   async function loadForUpdateByCode() {
     const code = lookupCode.trim();
@@ -1737,6 +1873,7 @@ function App() {
     setDetailEditForm(mapped);
     setDetailEditOriginal(mapped);
     setDetailEditFiles({});
+    setDetailFiliereDoctoraleDraft('');
     setDetailEditMode(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
@@ -1861,6 +1998,7 @@ function App() {
       setAllEtablissements((prev) => prev.map((e) => e.id === normalized.id ? normalized : e));
       setDetailEditMode(false);
       setDetailEditFiles({});
+      setDetailFiliereDoctoraleDraft('');
       showMessage('success', 'Établissement mis à jour avec succès.');
     } catch (error) {
       showMessage('error', `Mise à jour impossible : ${error.message}`);
@@ -1949,6 +2087,7 @@ function App() {
       setMarcheForm({ nom: '', telephone: '', email: '' });
       setFiliereForm({ nom: '', effectifs: [] });
       setEffectifDraftForm({ annee: '', total: '', masculin: '', feminin: '' });
+      setFiliereDoctoraleDraft({ nom: '' });
       setAccordDraft('');
       setFormErrors({});
       setPage(1);
@@ -1966,9 +2105,13 @@ function App() {
       if (error.fieldErrors) {
         const readable = Object.entries(error.fieldErrors)
           .map(([field, msgs]) => {
-            const msg = Array.isArray(msgs) ? msgs[0] : msgs;
+            let msg = Array.isArray(msgs) ? msgs[0] : msgs;
+            // Si msg est un objet (erreurs imbriquées), on l'affiche sous forme lisible
+            if (typeof msg === 'object' && msg !== null) {
+              msg = JSON.stringify(msg);
+            }
             // Traduction des messages d'erreur API courants
-            const translated = msg
+            const translated = String(msg || '')
               .replace(/etablissement with this sigle etablissement already exists\./i, 'Un établissement avec ce sigle existe déjà.')
               .replace(/with this .+ already exists\./i, 'Cette valeur existe déjà.')
               .replace('already exists.', 'existe déjà.')
@@ -2032,7 +2175,7 @@ function App() {
             </div>
             <div className="notice-body">
               <ul className="notice-list">
-                <li>Toute fausse déclaration entraînera des sanctions conformément aux règles et mesures disciplinaires en vigueur.</li>
+                <li>Les fausses déclarations exposent leurs auteurs aux sanctions disciplinaires et poursuites pénales prévues par les lois et règlements en vigueur</li>
                 <li>Ce formulaire est réservé <strong>exclusivement aux responsables des établissements</strong>.</li>
                 <li>Veuillez compléter <strong>toutes les informations requises</strong> avec précision, sans omission.</li>
                 <li>Veillez à <strong>ne pas enregistrer un établissement déjà existant</strong> dans la base de données.</li>
@@ -2345,6 +2488,58 @@ function App() {
                     />
                     {createForm.logo && <span className="create-doc-file">· {createForm.logo.name}</span>}
                   </div>
+
+                  {/* Nom du promoteur, Téléphone et Email - Masqués si statut Public */}
+                  {createForm.statut !== 'public' && (
+                    <>
+                      {/* Nom du promoteur */}
+                      <div className="create-field">
+                        <label className="create-label">Nom du promoteur <span className="create-required">*</span></label>
+                        <div className="create-input-wrap">
+                          <svg className="create-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="14" height="14"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                          <input
+                            className={`create-input${formErrors.nom_promoteur ? ' create-input-error' : ''}`}
+                            value={createForm.nom_promoteur}
+                            onChange={(e) => handleCreateChange('nom_promoteur', e.target.value)}
+                            placeholder="ex : Jean Mukendi"
+                          />
+                        </div>
+                        {formErrors.nom_promoteur && <span className="create-error"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="11" height="11"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>{formErrors.nom_promoteur}</span>}
+                      </div>
+
+                      {/* Téléphone promoteur */}
+                      <div className="create-field">
+                        <label className="create-label">Téléphone du promoteur <span className="create-required">*</span></label>
+                        <div className="create-input-wrap">
+                          <svg className="create-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="14" height="14"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.73 9.7 19.79 19.79 0 01.67 1.1 2 2 0 012.65 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 7.64a16 16 0 006.29 6.29l.95-.95a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
+                          <input
+                            type="tel"
+                            className={`create-input${formErrors.telephone_promoteur ? ' create-input-error' : ''}`}
+                            value={createForm.telephone_promoteur}
+                            onChange={(e) => handleCreateChange('telephone_promoteur', e.target.value)}
+                            placeholder="+243812345678"
+                          />
+                        </div>
+                        {formErrors.telephone_promoteur && <span className="create-error"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="11" height="11"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>{formErrors.telephone_promoteur}</span>}
+                      </div>
+
+                      {/* Email promoteur */}
+                      <div className="create-field">
+                        <label className="create-label">Email du promoteur <span className="create-required">*</span></label>
+                        <div className="create-input-wrap">
+                          <svg className="create-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="14" height="14"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                          <input
+                            type="email"
+                            className={`create-input${formErrors.email_promoteur ? ' create-input-error' : ''}`}
+                            value={createForm.email_promoteur}
+                            onChange={(e) => handleCreateChange('email_promoteur', e.target.value)}
+                            placeholder="jean.mukendi@email.com"
+                          />
+                        </div>
+                        {formErrors.email_promoteur && <span className="create-error"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="11" height="11"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>{formErrors.email_promoteur}</span>}
+                      </div>
+                    </>
+                  )}
 
                   {isPrivateCreate && (
                     <>
@@ -3288,25 +3483,12 @@ function App() {
                     {formErrors.niveaux_etudes && <span className="create-error">{formErrors.niveaux_etudes}</span>}
                   </div>
 
-                  {/* Autres niveaux */}
-                  <div className="create-field col-full">
-                    <label className="create-label">Autres niveaux <span className="create-required">*</span></label>
-                    <div className="create-input-wrap">
-                      <input
-                        className={`create-input create-input-no-icon${formErrors.autres_niveaux ? ' create-input-error' : ''}`}
-                        value={createForm.autres_niveaux}
-                        onChange={(e) => handleCreateChange('autres_niveaux', e.target.value)}
-                        placeholder="ex : DES, Certificat…"
-                      />
-                    </div>
-                    {formErrors.autres_niveaux && <span className="create-error">{formErrors.autres_niveaux}</span>}
-                  </div>
-
                   {/* Effectifs */}
                   {[
                     { key: 'effectif_licence_total', label: 'Effectif Licence (total)' },
                     { key: 'effectif_master_total', label: 'Effectif Master (total)' },
                     { key: 'effectif_doctorat_total', label: 'Effectif Doctorat (total)' },
+                    { key: 'effectif_etudiants_handicap_total', label: 'Effectif d\'étudiants vivant avec un handicap' },
                     { key: 'nombre_etudiants_lmd', label: 'Étudiants LMD (total)' },
                   ].map(({ key, label }) => (
                     <div key={key} className="create-field">
@@ -3326,11 +3508,42 @@ function App() {
                     </div>
                   ))}
 
+                  {/* Autres niveaux */}
+                  <div className="create-field col-full">
+                    <label className="create-label">Autres niveaux <span className="create-required">*</span></label>
+                    <div className="create-input-wrap">
+                      <input
+                        className={`create-input create-input-no-icon${formErrors.autres_niveaux ? ' create-input-error' : ''}`}
+                        value={createForm.autres_niveaux}
+                        onChange={(e) => handleCreateChange('autres_niveaux', e.target.value)}
+                        placeholder="ex : DES, Certificat…"
+                      />
+                    </div>
+                    {formErrors.autres_niveaux && <span className="create-error">{formErrors.autres_niveaux}</span>}
+                  </div>
+
+                  {/* Effectif des autres niveaux */}
+                  <div className="create-field">
+                    <label className="create-label">Effectif des autres niveaux <span className="create-required">*</span></label>
+                    <div className="create-input-wrap">
+                      <input
+                        type="number"
+                        min="0"
+                        step="1"
+                        className={`create-input create-input-no-icon${formErrors.definir_effectifs ? ' create-input-error' : ''}`}
+                        value={createForm.definir_effectifs}
+                        onChange={(e) => handleCreateChange('definir_effectifs', e.target.value)}
+                        placeholder="0"
+                      />
+                    </div>
+                    {formErrors.definir_effectifs && <span className="create-error">{formErrors.definir_effectifs}</span>}
+                  </div>
+
                 </div>
               </div>)}
 
               {/* ─── Section 7 : Patrimoine immobilier ─── */}
-              {createStep === 7 && (<div className="create-section">
+              {createStep === 7 && createForm.statut !== 'prive' && (<div className="create-section">
                 <div className="create-section-header">
                   <div className="create-section-num">7</div>
                   <div>
@@ -3460,6 +3673,22 @@ function App() {
                 </div>
               </div>)}
 
+              {/* Section 7 non applicable pour les établissements privés */}
+              {createStep === 7 && createForm.statut === 'prive' && (
+                <div className="create-section">
+                  <div className="create-section-header">
+                    <div className="create-section-num">7</div>
+                    <div>
+                      <h2 className="create-section-title">Patrimoine immobilier</h2>
+                      <p className="create-section-desc">Titres fonciers, location et responsable du patrimoine</p>
+                    </div>
+                  </div>
+                  <div style={{padding: '2rem', textAlign: 'center', backgroundColor: '#f5f5f5', borderRadius: '8px', border: '1px solid #ddd'}}>
+                    <p style={{color: '#666', fontSize: '1rem'}}>Cette section ne s'applique pas aux établissements privés.</p>
+                  </div>
+                </div>
+              )}
+
               {/* ─── Section 8 : Organisation et gestion ─── */}
               {createStep === 8 && (<div className="create-section">
                 <div className="create-section-header">
@@ -3554,6 +3783,21 @@ function App() {
                     </div>
                   </div>
 
+                  <div className="create-field">
+                    <label className="create-label">Nombre de dossiers finalistes contrôlés</label>
+                    <div className="create-input-wrap">
+                      <svg className="create-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="14" height="14"><path d="M12 5v14M5 12h14"/></svg>
+                      <input
+                        type="number"
+                        className="create-input"
+                        value={createForm.nombre_dossiers_finalistes_controles}
+                        onChange={(e) => handleCreateChange('nombre_dossiers_finalistes_controles', e.target.value)}
+                        placeholder="ex : 45"
+                        min="0"
+                      />
+                    </div>
+                  </div>
+
                 </div>
               </div>)}
 
@@ -3578,15 +3822,56 @@ function App() {
                   </div>
 
                   {createForm.ecole_doctorale && (
-                    <div className="create-field col-full">
-                      <label className="create-label">Textes juridiques de création / Autorisation de l'école (pièce jointe PDF)</label>
-                      <input
-                        type="file"
-                        className="create-file-input"
-                        onChange={(e) => handleCreateChange('acte_ecole_doctorale', e.target.files?.[0] || null)}
-                      />
-                      {createForm.acte_ecole_doctorale && <span className="create-doc-file">· {createForm.acte_ecole_doctorale.name}</span>}
-                    </div>
+                    <>
+                      <div className="create-field col-full">
+                        <label className="create-label">Textes juridiques de création / Autorisation de l'école (pièce jointe PDF)</label>
+                        <input
+                          type="file"
+                          className="create-file-input"
+                          onChange={(e) => handleCreateChange('acte_ecole_doctorale', e.target.files?.[0] || null)}
+                        />
+                        {createForm.acte_ecole_doctorale && <span className="create-doc-file">· {createForm.acte_ecole_doctorale.name}</span>}
+                      </div>
+
+                      {/* Filières organisées doctorales */}
+                      <div className="create-field col-full">
+                        <label className="create-label">Filières organisées doctorales</label>
+                        {createForm.filiere_organisee_doctorale.length > 0 && (
+                          <ul className="create-doc-list col-full">
+                            {createForm.filiere_organisee_doctorale.map((f, i) => (
+                              <li key={i} className="create-doc-item">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="13" height="13" style={{color:'var(--blue-400)',flexShrink:0}}><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                                <span className="create-doc-name">{f.nom}</span>
+                                <button type="button" className="create-doc-remove" onClick={() => removeFiliereDoctorale(i)} title="Retirer">
+                                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" width="12" height="12"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+
+                        <div className="create-field col-full" style={{marginTop:'0.8rem'}}>
+                          <label className="create-label">Nom de la filière <span className="create-required">*</span></label>
+                          <div className="create-input-wrap">
+                            <svg className="create-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="14" height="14"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                            <input
+                              className={`create-input${formErrors.filiere_doctorale_nom ? ' create-input-error' : ''}`}
+                              value={filiereDoctoraleDraft.nom}
+                              onChange={(e) => setFiliereDoctoraleDraft({ nom: e.target.value })}
+                              placeholder="Sciences de gestion"
+                            />
+                          </div>
+                          {formErrors.filiere_doctorale_nom && <span className="create-error">{formErrors.filiere_doctorale_nom}</span>}
+                        </div>
+
+                        <div className="create-field" style={{alignSelf:'flex-end', marginTop:'0.5rem'}}>
+                          <button type="button" className="create-btn-doc-add" onClick={addFiliereDoctorale}>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" width="13" height="13"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                            Ajouter filière
+                          </button>
+                        </div>
+                      </div>
+                    </>
                   )}
 
                 </div>
@@ -3746,6 +4031,409 @@ function App() {
                     {formErrors.soumissionnaire_telephone && <span className="create-error-msg">{formErrors.soumissionnaire_telephone}</span>}
                   </div>
 
+                  <div className="create-field">
+                    <label className="create-label">Qualité du soumissionnaire <span className="create-required">*</span></label>
+                    <div className="create-input-wrap">
+                      <svg className="create-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="14" height="14"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg>
+                      <input
+                        className={`create-input${formErrors.qualite_du_soumissionnaire ? ' create-input-error' : ''}`}
+                        value={createForm.qualite_du_soumissionnaire}
+                        onChange={(e) => handleCreateChange('qualite_du_soumissionnaire', e.target.value)}
+                        placeholder="Ex : Recteur, Secrétaire général, Mandataire"
+                      />
+                    </div>
+                    {formErrors.qualite_du_soumissionnaire && <span className="create-error-msg">{formErrors.qualite_du_soumissionnaire}</span>}
+                  </div>
+
+                </div>
+              </div>)}
+
+              {createStep === 13 && (<div className="create-section">
+                <div className="create-section-header">
+                  <div className="create-section-num">✓</div>
+                  <div>
+                    <h2 className="create-section-title">Récapitulatif de la saisie</h2>
+                    <p className="create-section-desc">Vérifiez toutes les informations avant de confirmer l'envoi</p>
+                  </div>
+                </div>
+
+                <div className="summary-container" style={{ fontSize: '14px', lineHeight: '1.6' }}>
+                  {/* ÉTAPE 1 : Identification */}
+                  <div className="summary-section">
+                    <h3 className="summary-section-title">① Identification</h3>
+                    <div className="summary-grid">
+                      <div className="summary-item">
+                        <span className="summary-label">Nom de l'établissement</span>
+                        <span className="summary-value">{createForm.nom_etablissement || '—'}</span>
+                      </div>
+                      <div className="summary-item">
+                        <span className="summary-label">Nom du promoteur</span>
+                        <span className="summary-value">{createForm.nom_promoteur || '—'}</span>
+                      </div>
+                      <div className="summary-item">
+                        <span className="summary-label">Téléphone du promoteur</span>
+                        <span className="summary-value">{createForm.telephone_promoteur || '—'}</span>
+                      </div>
+                      <div className="summary-item">
+                        <span className="summary-label">Email du promoteur</span>
+                        <span className="summary-value">{createForm.email_promoteur || '—'}</span>
+                      </div>
+                      <div className="summary-item">
+                        <span className="summary-label">Sigle</span>
+                        <span className="summary-value">{createForm.sigle_etablissement || '—'}</span>
+                      </div>
+                      <div className="summary-item">
+                        <span className="summary-label">Statut</span>
+                        <span className="summary-value">{toTitleCase(createForm.statut) || '—'}</span>
+                      </div>
+                      <div className="summary-item">
+                        <span className="summary-label">Pris en charge par l'État</span>
+                        <span className="summary-value">{createForm.pris_en_charge_par_etat ? 'Oui' : 'Non'}</span>
+                      </div>
+                      <div className="summary-item">
+                        <span className="summary-label">Logo</span>
+                        <span className="summary-value" style={{ color: createForm.logo ? 'var(--green-700)' : 'var(--red-500)' }}>
+                          {createForm.logo ? '✓ Fichier Attaché' : '✗ Aucun Fichier attaché'}
+                        </span>
+                      </div>
+                      <div className="summary-item">
+                        <span className="summary-label">Acte de prise en charge</span>
+                        <span className="summary-value" style={{ color: createForm.acte_prise_en_charge ? 'var(--green-700)' : 'var(--red-500)' }}>
+                          {createForm.acte_prise_en_charge ? '✓ Fichier Attaché' : '✗ Aucun Fichier attaché'}
+                        </span>
+                      </div>
+                      <div className="summary-item">
+                        <span className="summary-label">Convention de l'État</span>
+                        <span className="summary-value" style={{ color: createForm.convention_etat_rdc ? 'var(--green-700)' : 'var(--red-500)' }}>
+                          {createForm.convention_etat_rdc ? '✓ Fichier Attaché' : '✗ Aucun Fichier attaché'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* ÉTAPE 2 : Localisation */}
+                  <div className="summary-section">
+                    <h3 className="summary-section-title">② Localisation</h3>
+                    <div className="summary-grid">
+                      <div className="summary-item">
+                        <span className="summary-label">Adresse</span>
+                        <span className="summary-value">{createForm.adresse || '—'}</span>
+                      </div>
+                      <div className="summary-item">
+                        <span className="summary-label">Rue / Avenue</span>
+                        <span className="summary-value">{createForm.rue_avenue || '—'}</span>
+                      </div>
+                      <div className="summary-item">
+                        <span className="summary-label">Commune</span>
+                        <span className="summary-value">{createForm.commune || '—'}</span>
+                      </div>
+                      <div className="summary-item">
+                        <span className="summary-label">Ville / Localité</span>
+                        <span className="summary-value">{createForm.ville_localite || '—'}</span>
+                      </div>
+                      <div className="summary-item">
+                        <span className="summary-label">Province</span>
+                        <span className="summary-value">{createForm.province || '—'}</span>
+                      </div>
+                      <div className="summary-item">
+                        <span className="summary-label">Latitude</span>
+                        <span className="summary-value">{createForm.latitude || '—'}</span>
+                      </div>
+                      <div className="summary-item">
+                        <span className="summary-label">Longitude</span>
+                        <span className="summary-value">{createForm.longitude || '—'}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* ÉTAPE 3 : Contact */}
+                  <div className="summary-section">
+                    <h3 className="summary-section-title">③ Contact</h3>
+                    <div className="summary-grid">
+                      <div className="summary-item">
+                        <span className="summary-label">Téléphone</span>
+                        <span className="summary-value">{createForm.telephone || '—'}</span>
+                      </div>
+                      <div className="summary-item">
+                        <span className="summary-label">Email</span>
+                        <span className="summary-value">{createForm.email || '—'}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* ÉTAPE 4 : Autorisation */}
+                  <div className="summary-section">
+                    <h3 className="summary-section-title">④ Autorisation</h3>
+                    <div className="summary-grid">
+                      <div className="summary-item">
+                        <span className="summary-label">Date de création</span>
+                        <span className="summary-value">{createForm.date_creation || '—'}</span>
+                      </div>
+                      <div className="summary-item">
+                        <span className="summary-label">Acte juridique de création</span>
+                        <span className="summary-value" style={{ color: createForm.acte_creation ? 'var(--green-700)' : 'var(--red-500)' }}>
+                          {createForm.acte_creation ? '✓ Fichier Attaché' : '✗ Aucun Fichier attaché'}
+                        </span>
+                      </div>
+                      <div className="summary-item">
+                        <span className="summary-label">Acte d'autorisation de fonctionnement</span>
+                        <span className="summary-value" style={{ color: createForm.acte_fonctionnement ? 'var(--green-700)' : 'var(--red-500)' }}>
+                          {createForm.acte_fonctionnement ? '✓ Fichier Attaché' : '✗ Aucun Fichier attaché'}
+                        </span>
+                      </div>
+                      <div className="summary-item">
+                        <span className="summary-label">Acte d'agrément</span>
+                        <span className="summary-value" style={{ color: createForm.acte_agrement ? 'var(--green-700)' : 'var(--red-500)' }}>
+                          {createForm.acte_agrement ? '✓ Fichier Attaché' : '✗ Aucun Fichier attaché'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* ÉTAPE 5 : Comité de gestion */}
+                  <div className="summary-section">
+                    <h3 className="summary-section-title">⑤ Comité de gestion</h3>
+                    <div className="summary-subsection">
+                      <h4>Recteur / Directeur Général</h4>
+                      <div className="summary-grid" style={{ marginLeft: '1rem' }}>
+                        <div className="summary-item"><span className="summary-label">Nom</span><span className="summary-value">{createForm.recteur_nom || '—'}</span></div>
+                        <div className="summary-item"><span className="summary-label">Sexe</span><span className="summary-value">{createForm.recteur_sexe ? toTitleCase(createForm.recteur_sexe) : '—'}</span></div>
+                        <div className="summary-item"><span className="summary-label">Grade</span><span className="summary-value">{createForm.recteur_grade || '—'}</span></div>
+                        <div className="summary-item"><span className="summary-label">Téléphone</span><span className="summary-value">{createForm.recteur_telephone || '—'}</span></div>
+                        <div className="summary-item"><span className="summary-label">Email</span><span className="summary-value">{createForm.recteur_email || '—'}</span></div>
+                        <div className="summary-item"><span className="summary-label">Arrêté de nomination</span><span className="summary-value" style={{ color: createForm.recteur_arrete ? 'var(--green-700)' : 'var(--red-500)' }}>{createForm.recteur_arrete ? '✓ Fichier Attaché' : '✗ Aucun Fichier attaché'}</span></div>
+                      </div>
+                    </div>
+                    <div className="summary-subsection">
+                      <h4>Secrétaire Général Administratif (SGA)</h4>
+                      <div className="summary-grid" style={{ marginLeft: '1rem' }}>
+                        <div className="summary-item"><span className="summary-label">Nom</span><span className="summary-value">{createForm.sga_nom || '—'}</span></div>
+                        <div className="summary-item"><span className="summary-label">Sexe</span><span className="summary-value">{createForm.sga_sexe ? toTitleCase(createForm.sga_sexe) : '—'}</span></div>
+                        <div className="summary-item"><span className="summary-label">Grade</span><span className="summary-value">{createForm.sga_grade || '—'}</span></div>
+                        <div className="summary-item"><span className="summary-label">Arrêté de nomination</span><span className="summary-value" style={{ color: createForm.sga_arrete ? 'var(--green-700)' : 'var(--red-500)' }}>{createForm.sga_arrete ? '✓ Fichier Attaché' : '✗ Aucun Fichier attaché'}</span></div>
+                      </div>
+                    </div>
+                    <div className="summary-subsection">
+                      <h4>Administrateur du Budget (AB)</h4>
+                      <div className="summary-grid" style={{ marginLeft: '1rem' }}>
+                        <div className="summary-item"><span className="summary-label">Nom</span><span className="summary-value">{createForm.ab_nom || '—'}</span></div>
+                        <div className="summary-item"><span className="summary-label">Grade</span><span className="summary-value">{createForm.ab_grade || '—'}</span></div>
+                        <div className="summary-item"><span className="summary-label">Arrêté de nomination</span><span className="summary-value" style={{ color: createForm.ab_arrete ? 'var(--green-700)' : 'var(--red-500)' }}>{createForm.ab_arrete ? '✓ Fichier Attaché' : '✗ Aucun Fichier attaché'}</span></div>
+                      </div>
+                    </div>
+                    <div className="summary-subsection">
+                      <h4>Secrétaire Général de Recherche (SGR)</h4>
+                      <div className="summary-grid" style={{ marginLeft: '1rem' }}>
+                        <div className="summary-item"><span className="summary-label">Nom</span><span className="summary-value">{createForm.sgr_nom || '—'}</span></div>
+                        <div className="summary-item"><span className="summary-label">Grade</span><span className="summary-value">{createForm.sgr_grade || '—'}</span></div>
+                        <div className="summary-item"><span className="summary-label">Arrêté de nomination</span><span className="summary-value" style={{ color: createForm.sgr_arrete ? 'var(--green-700)' : 'var(--red-500)' }}>{createForm.sgr_arrete ? '✓ Fichier Attaché' : '✗ Aucun Fichier attaché'}</span></div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* ÉTAPE 6 : Ressources humaines */}
+                  <div className="summary-section">
+                    <h3 className="summary-section-title">⑥ Ressources humaines</h3>
+                    <div className="summary-grid">
+                      <div className="summary-item"><span className="summary-label">Total enseignants</span><span className="summary-value">{createForm.total_enseignants || '—'}</span></div>
+                      <div className="summary-item"><span className="summary-label">Professeurs Ordinaires (PO)</span><span className="summary-value">{createForm.po || '—'}</span></div>
+                      <div className="summary-item"><span className="summary-label">Professeurs (P)</span><span className="summary-value">{createForm.p || '—'}</span></div>
+                      <div className="summary-item"><span className="summary-label">Professeurs Associés (PA)</span><span className="summary-value">{createForm.pa || '—'}</span></div>
+                      <div className="summary-item"><span className="summary-label">Femmes enseignantes</span><span className="summary-value">{createForm.enseignants_femmes || '—'}</span></div>
+                      <div className="summary-item"><span className="summary-label">Chefs de travaux</span><span className="summary-value">{createForm.chefs_travaux || '—'}</span></div>
+                      <div className="summary-item"><span className="summary-label">Assistants</span><span className="summary-value">{createForm.assistants || '—'}</span></div>
+                      <div className="summary-item"><span className="summary-label">Cadres de commandement</span><span className="summary-value">{createForm.cadres_commandement || '—'}</span></div>
+                      <div className="summary-item"><span className="summary-label">Agents d'exécution</span><span className="summary-value">{createForm.agents_execution || '—'}</span></div>
+                    </div>
+                  </div>
+
+                  {/* ÉTAPE 7 : Organisation académique */}
+                  <div className="summary-section">
+                    <h3 className="summary-section-title">⑦ Organisation académique</h3>
+                    <div className="summary-grid">
+                      <div className="summary-item">
+                        <span className="summary-label">Licence</span>
+                        <span className="summary-value">{createForm.licence ? 'Oui' : 'Non'}</span>
+                      </div>
+                      <div className="summary-item">
+                        <span className="summary-label">Master</span>
+                        <span className="summary-value">{createForm.master ? 'Oui' : 'Non'}</span>
+                      </div>
+                      <div className="summary-item">
+                        <span className="summary-label">Doctorat</span>
+                        <span className="summary-value">{createForm.doctorat ? 'Oui' : 'Non'}</span>
+                      </div>
+                      <div className="summary-item">
+                        <span className="summary-label">Effectif Licence</span>
+                        <span className="summary-value">{createForm.effectif_licence_total || '—'}</span>
+                      </div>
+                      <div className="summary-item">
+                        <span className="summary-label">Effectif Master</span>
+                        <span className="summary-value">{createForm.effectif_master_total || '—'}</span>
+                      </div>
+                      <div className="summary-item">
+                        <span className="summary-label">Effectif Doctorat</span>
+                        <span className="summary-value">{createForm.effectif_doctorat_total || '—'}</span>
+                      </div>
+                      <div className="summary-item">
+                        <span className="summary-label">Effectif handicap</span>
+                        <span className="summary-value">{createForm.effectif_etudiants_handicap_total || '—'}</span>
+                      </div>
+                    </div>
+                    {createForm.filieres.length > 0 && (
+                      <div style={{ marginTop: '1rem' }}>
+                        <h4>Filières</h4>
+                        {createForm.filieres.map((f, i) => (
+                          <div key={i} style={{ marginLeft: '1rem', marginBottom: '0.5rem' }}>
+                            <strong>{f.nom}</strong> — {f.effectifs.length} année(s)
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* ÉTAPE 8 : Patrimoine */}
+                  <div className="summary-section">
+                    <h3 className="summary-section-title">⑧ Patrimoine</h3>
+                    <div className="summary-grid">
+                      <div className="summary-item">
+                        <span className="summary-label">Résidences personnel</span>
+                        <span className="summary-value">{createForm.nombre_residences_personnel || '—'}</span>
+                      </div>
+                      <div className="summary-item">
+                        <span className="summary-label">Résidences estudiantines</span>
+                        <span className="summary-value">{createForm.nombre_residences_estudiantines || '—'}</span>
+                      </div>
+                      <div className="summary-item">
+                        <span className="summary-label">Locataire</span>
+                        <span className="summary-value">{createForm.est_locataire ? 'Oui' : 'Non'}</span>
+                      </div>
+                      <div className="summary-item">
+                        <span className="summary-label">Responsable patrimoine</span>
+                        <span className="summary-value">{createForm.responsable_patrimoine_nom || '—'}</span>
+                      </div>
+                      <div className="summary-item">
+                        <span className="summary-label">Titre de propriété</span>
+                        <span className="summary-value" style={{ color: createForm.titre_propriete_propriete ? 'var(--green-700)' : 'var(--red-500)' }}>
+                          {createForm.titre_propriete_propriete ? '✓ Attaché' : '✗ Non attaché'}
+                        </span>
+                      </div>
+                      <div className="summary-item">
+                        <span className="summary-label">Organigramme</span>
+                        <span className="summary-value" style={{ color: createForm.organigramme_fichier ? 'var(--green-700)' : 'var(--red-500)' }}>
+                          {createForm.organigramme_fichier ? '✓ Attaché' : '✗ Non attaché'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* ÉTAPE 9 : Contrôles */}
+                  <div className="summary-section">
+                    <h3 className="summary-section-title">⑨ Contrôles</h3>
+                    <div className="summary-grid">
+                      <div className="summary-item">
+                        <span className="summary-label">Audit interne</span>
+                        <span className="summary-value">{createForm.audit_interne ? 'Oui' : 'Non'}</span>
+                      </div>
+                      <div className="summary-item">
+                        <span className="summary-label">Dernier contrôle viabilité</span>
+                        <span className="summary-value">{createForm.date_dernier_controle_viabilite || '—'}</span>
+                      </div>
+                      <div className="summary-item">
+                        <span className="summary-label">Dernier contrôle gestion</span>
+                        <span className="summary-value">{createForm.date_dernier_controle_gestion || '—'}</span>
+                      </div>
+                      <div className="summary-item">
+                        <span className="summary-label">Dernier contrôle scolarité</span>
+                        <span className="summary-value">{createForm.date_dernier_controle_scolarite || '—'}</span>
+                      </div>
+                      <div className="summary-item">
+                        <span className="summary-label">Dossiers finalistes contrôlés</span>
+                        <span className="summary-value">{createForm.nombre_dossiers_finalistes_controles || '—'}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* ÉTAPE 10 : École doctorale */}
+                  <div className="summary-section">
+                    <h3 className="summary-section-title">⑩ École doctorale</h3>
+                    <div className="summary-grid">
+                      <div className="summary-item">
+                        <span className="summary-label">École doctorale</span>
+                        <span className="summary-value">{createForm.ecole_doctorale ? 'Oui' : 'Non'}</span>
+                      </div>
+                      <div className="summary-item">
+                        <span className="summary-label">Acte école doctorale</span>
+                        <span className="summary-value" style={{ color: createForm.acte_ecole_doctorale ? 'var(--green-700)' : 'var(--red-500)' }}>
+                          {createForm.acte_ecole_doctorale ? '✓ Attaché' : '✗ Non attaché'}
+                        </span>
+                      </div>
+                    </div>
+                    {createForm.filiere_organisee_doctorale.length > 0 && (
+                      <div style={{ marginTop: '1rem' }}>
+                        <h4>Filières organisées</h4>
+                        {createForm.filiere_organisee_doctorale.map((f, i) => (
+                          <div key={i} style={{ marginLeft: '1rem' }}>• {f.nom}</div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* ÉTAPE 11 : Marchés publics */}
+                  <div className="summary-section">
+                    <h3 className="summary-section-title">⑪ Marchés publics</h3>
+                    <div className="summary-grid">
+                      <div className="summary-item">
+                        <span className="summary-label">Cellule marchés publics</span>
+                        <span className="summary-value">{createForm.cellule_marches_publics ? 'Oui' : 'Non'}</span>
+                      </div>
+                    </div>
+                    {createForm.marches_publics.length > 0 && (
+                      <div style={{ marginTop: '1rem' }}>
+                        <h4>Membres</h4>
+                        {createForm.marches_publics.map((m, i) => (
+                          <div key={i} style={{ marginLeft: '1rem', marginBottom: '0.5rem' }}>
+                            <strong>{m.nom}</strong> — {m.telephone} — {m.email}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* ÉTAPE 12 : Soumissionnaire */}
+                  <div className="summary-section">
+                    <h3 className="summary-section-title">⑫ Soumissionnaire</h3>
+                    <div className="summary-grid">
+                      <div className="summary-item">
+                        <span className="summary-label">Nom</span>
+                        <span className="summary-value">{createForm.soumissionnaire_nom || '—'}</span>
+                      </div>
+                      <div className="summary-item">
+                        <span className="summary-label">Email</span>
+                        <span className="summary-value">{createForm.soumissionnaire_email || '—'}</span>
+                      </div>
+                      <div className="summary-item">
+                        <span className="summary-label">Téléphone</span>
+                        <span className="summary-value">{createForm.soumissionnaire_telephone || '—'}</span>
+                      </div>
+                      <div className="summary-item">
+                        <span className="summary-label">Qualité</span>
+                        <span className="summary-value">{createForm.qualite_du_soumissionnaire || '—'}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Accords de mobilité */}
+                  {createForm.accords_mobilite.length > 0 && (
+                    <div className="summary-section">
+                      <h3 className="summary-section-title">Accords de mobilité internationale</h3>
+                      {createForm.accords_mobilite.map((a, i) => (
+                        <div key={i} style={{ marginLeft: '1rem', marginBottom: '0.5rem' }}>
+                          • {a.accord}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>)}
 
@@ -3756,8 +4444,10 @@ function App() {
                 </button>
                 <div style={{display:'flex', gap:'0.5rem', marginLeft:'auto'}}>
                   {createStep > 1 && (
-                    <button type="button" className="create-btn-prev" onClick={() => setCreateStep((s) => s - 1)}>
-                      ← Précédent
+                    <button type="button" className="create-btn-prev" onClick={() => {
+                      setCreateStep(createStep - 1);
+                    }}>
+                      ← Retour
                     </button>
                   )}
                   {createStep < CREATE_STEPS[CREATE_STEPS.length - 1].num ? (
@@ -3770,7 +4460,7 @@ function App() {
                         ? <><span className="spinner" /> Envoi en cours…</>
                         : <>
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" width="14" height="14"><polyline points="20 6 9 17 4 12"/></svg>
-                            Créer l'établissement
+                            Confirmer &amp; Envoyer
                           </>
                       }
                     </button>
@@ -3932,9 +4622,11 @@ function App() {
                 <div className="detail-rows">
                   <div className="detail-row"><span>Niveaux</span><span>{[detailEtab.licence && 'Licence', detailEtab.master && 'Master', detailEtab.doctorat && 'Doctorat'].filter(Boolean).join(', ') || '—'}</span></div>
                   <div className="detail-row"><span>Autres niveaux</span><span>{detailEtab.autres_niveaux || '—'}</span></div>
+                  <div className="detail-row"><span>Effectif des autres niveaux</span><span>{detailEtab.definir_effectifs || '—'}</span></div>
                   <div className="detail-row"><span>Effectif Licence</span><span>{detailEtab.effectif_licence_total || '—'}</span></div>
                   <div className="detail-row"><span>Effectif Master</span><span>{detailEtab.effectif_master_total || '—'}</span></div>
                   <div className="detail-row"><span>Effectif Doctorat</span><span>{detailEtab.effectif_doctorat_total || '—'}</span></div>
+                  <div className="detail-row"><span>Effectif avec handicap</span><span>{detailEtab.effectif_etudiants_handicap_total || '—'}</span></div>
                   <div className="detail-row"><span>Total étudiants LMD</span><span>{detailEtab.nombre_etudiants_lmd || '—'}</span></div>
                 </div>
                 {detailEtab.filieres && detailEtab.filieres.length > 0 && (
@@ -3973,6 +4665,8 @@ function App() {
               </div>
 
               {/* 6. Patrimoine */}
+              {/* Patrimoine - Masqué pour les établissements privés */}
+              {detailEtab.statut !== 'prive' && (
               <div className="detail-card">
                 <div className="detail-card-head">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="15" height="15"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
@@ -3989,6 +4683,7 @@ function App() {
                 </div>
                 {detailEtab.titre_propriete_propriete && <a href={`${API_BASE_URL.replace(/\/$/, '')}${detailEtab.titre_propriete_propriete}`} target="_blank" rel="noreferrer" className="detail-doc-link" style={{marginTop:'0.5rem'}}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="12" height="12"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Titre de propriété</a>}
               </div>
+              )}
 
               {/* 7. Gestion & Contrôles */}
               <div className="detail-card">
@@ -4016,6 +4711,17 @@ function App() {
                   <div className="detail-row"><span>École doctorale</span><span>{detailEtab.ecole_doctorale ? 'Oui' : 'Non'}</span></div>
                 </div>
                 {detailEtab.acte_ecole_doctorale && <a href={`${API_BASE_URL.replace(/\/$/, '')}${detailEtab.acte_ecole_doctorale}`} target="_blank" rel="noreferrer" className="detail-doc-link" style={{marginTop:'0.5rem'}}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="12" height="12"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Textes juridiques de création / Autorisation de l'école</a>}
+                {detailEtab.filiere_organisee_doctorale && detailEtab.filiere_organisee_doctorale.length > 0 && (
+                  <ul className="detail-filiere-list" style={{marginTop:'0.8rem'}}>
+                    <li style={{fontWeight:'500', fontSize:'0.85rem', color:'var(--gray-600)', marginBottom:'0.5rem'}}>Filières organisées doctorales :</li>
+                    {detailEtab.filiere_organisee_doctorale.map((f, i) => (
+                      <li key={i} className="detail-filiere-item">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="12" height="12" style={{color:'var(--blue-400)',flexShrink:0}}><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                        <span>{f.nom}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
 
               {/* 9. Marchés publics */}
@@ -4044,7 +4750,7 @@ function App() {
               )}
 
               {/* 10. Soumissionnaire */}
-              {(detailEtab.soumissionnaire_nom || detailEtab.soumissionnaire_email) && (
+              {(detailEtab.soumissionnaire_nom || detailEtab.soumissionnaire_email || detailEtab.qualite_du_soumissionnaire) && (
                 <div className="detail-card">
                   <div className="detail-card-head">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="15" height="15"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
@@ -4054,6 +4760,7 @@ function App() {
                     <div className="detail-row"><span>Nom</span><span>{detailEtab.soumissionnaire_nom || '—'}</span></div>
                     <div className="detail-row"><span>Email</span><span>{detailEtab.soumissionnaire_email || '—'}</span></div>
                     <div className="detail-row"><span>Téléphone</span><span>{detailEtab.soumissionnaire_telephone || '—'}</span></div>
+                    <div className="detail-row"><span>Qualité</span><span>{detailEtab.qualite_du_soumissionnaire || '—'}</span></div>
                   </div>
                 </div>
               )}
@@ -4373,16 +5080,20 @@ function App() {
                       </label>
                     ))}
                   </div>
-                  <div className="create-field col-full">
-                    <label className="create-label">Autres niveaux</label>
-                    <input className="create-input create-input-no-icon" value={detailEditForm.autres_niveaux} onChange={(e) => handleDetailEditChange('autres_niveaux', e.target.value)} />
-                  </div>
-                  {[['effectif_licence_total','Effectif Licence'],['effectif_master_total','Effectif Master'],['effectif_doctorat_total','Effectif Doctorat'],['nombre_etudiants_lmd','Total étudiants LMD']].map(([f,l]) => (
+                  {[['effectif_licence_total','Effectif Licence'],['effectif_master_total','Effectif Master'],['effectif_doctorat_total','Effectif Doctorat'],['effectif_etudiants_handicap_total','Effectif avec handicap'],['nombre_etudiants_lmd','Total étudiants LMD']].map(([f,l]) => (
                     <div className="create-field" key={f}>
                       <label className="create-label">{l}</label>
                       <input type="number" min="0" className="create-input create-input-no-icon" value={detailEditForm[f]} onChange={(e) => handleDetailEditChange(f, e.target.value)} />
                     </div>
                   ))}
+                  <div className="create-field col-full">
+                    <label className="create-label">Autres niveaux</label>
+                    <input className="create-input create-input-no-icon" value={detailEditForm.autres_niveaux} onChange={(e) => handleDetailEditChange('autres_niveaux', e.target.value)} />
+                  </div>
+                  <div className="create-field">
+                    <label className="create-label">Effectif des autres niveaux</label>
+                    <input type="number" min="0" className="create-input create-input-no-icon" value={detailEditForm.definir_effectifs} onChange={(e) => handleDetailEditChange('definir_effectifs', e.target.value)} />
+                  </div>
                 {/* Filières */}
                 <div className="create-field col-full edit-filieres-block">
                   <div className="edit-filieres-label">Filières</div>
@@ -4447,7 +5158,8 @@ function App() {
                 </div>{/* /create-grid */}
               </div>{/* /section 5 */}
 
-              {/* 6. Patrimoine */}
+              {/* 6. Patrimoine - Masqué pour les établissements privés */}
+              {detailEtab.statut !== 'prive' && (
               <div className="create-section">
                 <div className="create-section-header">
                   <div className="create-section-num">6</div>
@@ -4504,6 +5216,7 @@ function App() {
                   </div>
                 </div>
               </div>
+              )}
 
               {/* 7. Gestion & Contrôles */}
               <div className="create-section">
@@ -4572,23 +5285,68 @@ function App() {
                     </div>
                   </div>
                   {detailEditForm.ecole_doctorale && (
-                    <div className="create-field">
-                      <label className="create-label">Textes juridiques de création / Autorisation de l'école (pièce jointe PDF)</label>
-                      <div className="detail-file-field">
-                        {detailEtab.acte_ecole_doctorale && !detailEditFiles.acte_ecole_doctorale && (
-                          <a href={`${API_BASE_URL.replace(/\/$/, '')}${detailEtab.acte_ecole_doctorale}`} target="_blank" rel="noreferrer" className="detail-file-current">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="13" height="13"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                            Fichier actuel
-                          </a>
-                        )}
-                        {detailEditFiles.acte_ecole_doctorale && <span className="detail-file-new">✓ {detailEditFiles.acte_ecole_doctorale.name}</span>}
-                        <label className="detail-file-replace-btn">
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="13" height="13"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                          {detailEditFiles.acte_ecole_doctorale ? 'Changer' : (detailEtab.acte_ecole_doctorale ? 'Remplacer' : 'Choisir')}
-                          <input type="file" style={{display:'none'}} onChange={(e) => handleDetailEditFileChange('acte_ecole_doctorale', e.target.files?.[0])} />
-                        </label>
+                    <>
+                      <div className="create-field">
+                        <label className="create-label">Textes juridiques de création / Autorisation de l'école (pièce jointe PDF)</label>
+                        <div className="detail-file-field">
+                          {detailEtab.acte_ecole_doctorale && !detailEditFiles.acte_ecole_doctorale && (
+                            <a href={`${API_BASE_URL.replace(/\/$/, '')}${detailEtab.acte_ecole_doctorale}`} target="_blank" rel="noreferrer" className="detail-file-current">
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="13" height="13"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                              Fichier actuel
+                            </a>
+                          )}
+                          {detailEditFiles.acte_ecole_doctorale && <span className="detail-file-new">✓ {detailEditFiles.acte_ecole_doctorale.name}</span>}
+                          <label className="detail-file-replace-btn">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="13" height="13"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                            {detailEditFiles.acte_ecole_doctorale ? 'Changer' : (detailEtab.acte_ecole_doctorale ? 'Remplacer' : 'Choisir')}
+                            <input type="file" style={{display:'none'}} onChange={(e) => handleDetailEditFileChange('acte_ecole_doctorale', e.target.files?.[0])} />
+                          </label>
+                        </div>
                       </div>
-                    </div>
+
+                      {/* Filières organisées doctorales */}
+                      <div className="create-field col-full">
+                        <label className="create-label">Filières organisées doctorales</label>
+                        {detailEditForm.filiere_organisee_doctorale && detailEditForm.filiere_organisee_doctorale.length > 0 && (
+                          <ul className="create-doc-list col-full">
+                            {detailEditForm.filiere_organisee_doctorale.map((f, i) => (
+                              <li key={i} className="create-doc-item">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="13" height="13" style={{color:'var(--blue-400)',flexShrink:0}}><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                                <span className="create-doc-name">{f.nom}</span>
+                                <button type="button" className="create-doc-remove" onClick={() => {setDetailEditForm(prev => ({...prev, filiere_organisee_doctorale: prev.filiere_organisee_doctorale.filter((_, idx) => idx !== i)}));}} title="Retirer">
+                                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" width="12" height="12"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+
+                        <div className="create-field col-full" style={{marginTop:'0.8rem'}}>
+                          <label className="create-label">Nom de la filière <span className="create-required">*</span></label>
+                          <div className="create-input-wrap">
+                            <svg className="create-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="14" height="14"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                            <input
+                              className="create-input"
+                              value={detailFiliereDoctoraleDraft}
+                              onChange={(e) => setDetailFiliereDoctoraleDraft(e.target.value)}
+                              placeholder="Sciences de gestion"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="create-field" style={{alignSelf:'flex-end', marginTop:'0.5rem'}}>
+                          <button type="button" className="create-btn-doc-add" onClick={() => {
+                            if (detailFiliereDoctoraleDraft.trim()) {
+                              setDetailEditForm(prev => ({...prev, filiere_organisee_doctorale: [...prev.filiere_organisee_doctorale, {nom: detailFiliereDoctoraleDraft.trim()}]}));
+                              setDetailFiliereDoctoraleDraft('');
+                            }
+                          }}>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" width="13" height="13"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                            Ajouter filière
+                          </button>
+                        </div>
+                      </div>
+                    </>
                   )}
                 </div>
               </div>
@@ -4641,6 +5399,10 @@ function App() {
                   <div className="create-field">
                     <label className="create-label">Téléphone</label>
                     <div className="create-input-wrap"><svg className="create-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="14" height="14"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81"/></svg><input className="create-input" value={detailEditForm.soumissionnaire_telephone} onChange={(e) => handleDetailEditChange('soumissionnaire_telephone', e.target.value)} /></div>
+                  </div>
+                  <div className="create-field">
+                    <label className="create-label">Qualité du soumissionnaire</label>
+                    <div className="create-input-wrap"><svg className="create-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="14" height="14"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg><input className="create-input" value={detailEditForm.qualite_du_soumissionnaire} onChange={(e) => handleDetailEditChange('qualite_du_soumissionnaire', e.target.value)} /></div>
                   </div>
                 </div>
               </div>

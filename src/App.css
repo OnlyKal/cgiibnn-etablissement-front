@@ -2722,6 +2722,121 @@ input[type="file"]::-webkit-file-upload-button:hover {
   box-shadow: none;
 }
 
+/* ═══════════════════════════════════════════════════════
+   RÉCAPITULATIF - SUMMARY STYLES
+═══════════════════════════════════════════════════════ */
+.summary-container {
+  background: var(--slate-50);
+  border: 1px solid var(--slate-200);
+  border-radius: var(--radius-lg);
+  padding: 2rem;
+  max-height: 65vh;
+  overflow-y: auto;
+}
+
+.summary-section {
+  margin-bottom: 2rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--slate-200);
+}
+
+.summary-section:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.summary-section-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--blue-700);
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.summary-subsection {
+  margin-bottom: 1.2rem;
+  padding-left: 1.5rem;
+}
+
+.summary-subsection h4 {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--slate-700);
+  margin-bottom: 0.8rem;
+  border-left: 3px solid var(--blue-500);
+  padding-left: 0.75rem;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.summary-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 0.75rem;
+  background: white;
+  border: 1px solid var(--slate-200);
+  border-radius: var(--radius);
+  font-size: 0.9rem;
+}
+
+.summary-label {
+  font-weight: 500;
+  color: var(--slate-600);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.summary-value {
+  color: var(--slate-900);
+  font-weight: 500;
+  word-break: break-word;
+}
+
+.summary-container::-webkit-scrollbar {
+  width: 8px;
+}
+
+.summary-container::-webkit-scrollbar-track {
+  background: var(--slate-100);
+  border-radius: 4px;
+}
+
+.summary-container::-webkit-scrollbar-thumb {
+  background: var(--slate-400);
+  border-radius: 4px;
+}
+
+.summary-container::-webkit-scrollbar-thumb:hover {
+  background: var(--slate-500);
+}
+
+/* ── Responsive ── */
+@media (max-width: 680px) {
+  .summary-container {
+    padding: 1rem;
+    max-height: 60vh;
+  }
+
+  .summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .summary-section {
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+  }
+}
+
 /* ── Responsive ── */
 @media (max-width: 680px) {
   .create-main { padding: 1rem 0.75rem 2rem; }
